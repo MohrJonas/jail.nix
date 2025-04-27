@@ -1,0 +1,45 @@
+# jail.nix
+
+A helper to make it easy and ergonomic to wrap your derivations in
+[bubblewrap](https://github.com/containers/bubblewrap).
+
+## Example
+
+```nix
+# flake.nix
+{
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+  inputs.jail-nix.url = "sourcehut:~alexdavid/jail.nix";
+
+  outputs = { nixpkgs, jail-nix, ... }: let
+    pkgs = import nixpkgs { system = "x86_64-linux"; };
+    jail = jail-nix.lib.init pkgs;
+
+    untrusted-package = pkgs.writeScriptBin "untrusted" ''
+      ls -la $HOME
+    '';
+  in {
+    packages.x86_64-linux.jailed = jail "my-jail" untrusted-package (h: with h; [
+      # By default, only the bare minimum permissions are exposed, in this list
+      # you can add additional permissions that you want the program to have.
+      # See ./helpers.nix for more functions that can go here
+
+      # Give program access to the network
+      network
+
+      # Allow program to talk to create windows
+      gui
+
+      # Give program access to the GPU
+      gpu
+
+      # Give program read-only access to /var/log/journal
+      (readonly "/var/log/journal")
+
+      # Mount ~/foo to /bar in the jail as read-write
+      # (noescape due to `~` — all arguments are shell escaped by default)
+      (rw-bind (noescape "~/foo") "/bar")
+    ]);
+  };
+}
+```
