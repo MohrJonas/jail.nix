@@ -3,9 +3,11 @@
 
   exe-str = if builtins.typeOf exe == "string" then lib.escapeShellArg exe else lib.getExe exe;
 
-  helpers = {
+  helpers = rec {
     escape = rawOrStr: if builtins.typeOf rawOrStr == "string" then lib.strings.escapeShellArg rawOrStr else rawOrStr.raw;
     noescape = value: { raw = value; };
+    dataDir = "~/.local/share/jail.nix";
+    dataDirSubPath = subPath: "${dataDir}/${escape subPath}";
   };
 
   combinators = import ./combinators.nix {
@@ -35,12 +37,16 @@
     (fwd-env "TERM")
 
     (add-runtime ''
-      if [ ! -e ~/.local/share/jails/passwd ]; then
-        echo "root:x:0:0:System administrator:/root:$(which nologin)" > ~/.local/share/jails/passwd
-        echo "$USER:x:$(id -u):$(id -g)::$HOME:$(which nologin)" >> ~/.local/share/jails/passwd
-      fi
-    '')
-    (unsafe-add-raw-args "--ro-bind ~/.local/share/jails/passwd /etc/passwd")
+     if [ ! -e ${helpers.dataDirSubPath "passwd"} ] || [ ! -e ${helpers.dataDirSubPath "group"} ]; then
+     mkdir -p ${helpers.dataDir}
+     echo "root:x:0:0:System administrator:/root:$(which nologin)" > ${helpers.dataDirSubPath "passwd"}
+     echo "$(id -un):x:$(id -u):$(id -g)::$HOME:$(which nologin)" >> ${helpers.dataDirSubPath "passwd"}
+     echo "root:x:0:" > ${helpers.dataDirSubPath "group"}
+     echo "$(id -gn):x:$(id -g):" >> ${helpers.dataDirSubPath "group"}
+     fi
+     '')
+    (ro-bind (noescape (helpers.dataDirSubPath "passwd")) "/etc/passwd")
+    (ro-bind (noescape (helpers.dataDirSubPath "group")) "/etc/group")
   ]);
 in lib.pipe combinators [
   # collect opts
