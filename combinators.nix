@@ -78,8 +78,17 @@ in rec {
       path
       (pkgs.writeText "jail-write-text-${lib.strings.sanitizeDerivationName (escape path)}" contents);
 
-  persisthome = name: compose [
-    (add-runtime "mkdir -p ~/.local/share/jails/${lib.escapeShellArg name}")
-    (rw-bind (noescape "~/.local/share/jails/${lib.escapeShellArg name}") (noescape "~"))
+  persist-home = name: compose [
+    (add-runtime "mkdir -p ${helpers.dataDirSubPath "home/${name}"}")
+    (rw-bind (noescape (helpers.dataDirSubPath "home/${name}")) (noescape "~"))
   ];
+
+  ############################################
+  # deprecated
+  persisthome = name: helpers.deprecatedCombinator
+    "persisthome is deprecated, use persist-home instead. When doing so, rename ~/.local/share/jails/${name} to ${helpers.dataDirSubPath "home/${name}"}"
+    (compose [
+      (add-runtime "mkdir -p ~/.local/share/jails/${lib.escapeShellArg name}")
+      (rw-bind (noescape "~/.local/share/jails/${lib.escapeShellArg name}") (noescape "~"))
+    ]);
 }

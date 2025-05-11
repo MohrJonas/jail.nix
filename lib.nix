@@ -8,6 +8,7 @@
     noescape = value: { raw = value; };
     dataDir = "~/.local/share/jail.nix";
     dataDirSubPath = subPath: "${dataDir}/${escape subPath}";
+    deprecatedCombinator = message: combinator: lib.warn "jail ${name}: ${message}" combinator;
   };
 
   combinators = import ./combinators.nix {
