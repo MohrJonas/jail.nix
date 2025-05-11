@@ -3,7 +3,14 @@
 
   exe-str = if builtins.typeOf exe == "string" then lib.escapeShellArg exe else lib.getExe exe;
 
-  combinators = import ./combinators.nix pkgs;
+  helpers = {
+    escape = rawOrStr: if builtins.typeOf rawOrStr == "string" then lib.strings.escapeShellArg rawOrStr else rawOrStr.raw;
+    noescape = value: { raw = value; };
+  };
+
+  combinators = import ./combinators.nix {
+    inherit pkgs lib helpers;
+  };
 
   initial-state = lib.pipe {
     cmd = "${lib.getExe pkgs.bubblewrap}";

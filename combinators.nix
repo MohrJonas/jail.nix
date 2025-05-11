@@ -1,9 +1,10 @@
-pkgs: let
-  escape = rawOrStr: if builtins.typeOf rawOrStr == "string" then pkgs.lib.strings.escapeShellArg rawOrStr else rawOrStr.raw;
+{ pkgs, lib, helpers }: let
+  inherit (helpers) escape noescape;
 in rec {
-  noescape = value: { raw = value; };
+  # noescape isn't a combinator, but it's a useful helper to expose when defining jails
+  inherit noescape;
 
-  compose = helpers: state: pkgs.lib.pipe state helpers;
+  compose = helpers: state: lib.pipe state helpers;
 
   unsafe-add-raw-args = args: state: state // { cmd = "${state.cmd} ${args}"; };
   add-path = path: state: state // { path = "${state.path}:${path}"; };
@@ -75,10 +76,10 @@ in rec {
   write-text = path: contents:
     bind-pkg
       path
-      (pkgs.writeText "jail-write-text-${pkgs.lib.strings.sanitizeDerivationName (escape path)}" contents);
+      (pkgs.writeText "jail-write-text-${lib.strings.sanitizeDerivationName (escape path)}" contents);
 
   persisthome = name: compose [
-    (add-runtime "mkdir -p ~/.local/share/jails/${pkgs.lib.escapeShellArg name}")
-    (rw-bind (noescape "~/.local/share/jails/${pkgs.lib.escapeShellArg name}") (noescape "~"))
+    (add-runtime "mkdir -p ~/.local/share/jails/${lib.escapeShellArg name}")
+    (rw-bind (noescape "~/.local/share/jails/${lib.escapeShellArg name}") (noescape "~"))
   ];
 }
