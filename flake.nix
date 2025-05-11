@@ -7,9 +7,9 @@
         inherit pkgs name exe getOpts;
       };
 
-      extend = { pkgs, additionalHelpers }: name: exe: getOpts: runJail {
+      extend = { pkgs, additionalCombinators }: name: exe: getOpts: runJail {
         inherit pkgs name exe;
-        getOpts = helpers: getOpts (helpers // additionalHelpers helpers);
+        getOpts = combinators: getOpts (combinators // additionalCombinators combinators);
       };
     };
   };

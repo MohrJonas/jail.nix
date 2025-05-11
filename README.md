@@ -19,10 +19,10 @@ A helper to make it easy and ergonomic to wrap your derivations in
       ls -la $HOME
     '';
   in {
-    packages.x86_64-linux.jailed = jail "my-jail" untrusted-package (h: with h; [
+    packages.x86_64-linux.jailed = jail "my-jail" untrusted-package (combinators: with combinators; [
       # By default, only the bare minimum permissions are exposed, in this list
       # you can add additional permissions that you want the program to have.
-      # See ./helpers.nix for more functions that can go here
+      # See ./combinators.nix for more functions that can go here
 
       # Give program access to the network
       network

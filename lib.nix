@@ -3,7 +3,7 @@
 
   exe-str = if builtins.typeOf exe == "string" then lib.escapeShellArg exe else lib.getExe exe;
 
-  jail-helpers = import ./helpers.nix pkgs;
+  combinators = import ./combinators.nix pkgs;
 
   initial-state = lib.pipe {
     cmd = "${lib.getExe pkgs.bubblewrap}";
@@ -13,7 +13,7 @@
     new-session = true;
     hostname = "jail";
     env = {};
-  } (with jail-helpers; [
+  } (with combinators; [
     (unsafe-add-raw-args "--proc /proc")
     (unsafe-add-raw-args "--dev /dev")
     (unsafe-add-raw-args "--tmpfs /tmp")
@@ -35,13 +35,13 @@
     '')
     (unsafe-add-raw-args "--ro-bind ~/.local/share/jails/passwd /etc/passwd")
   ]);
-in lib.pipe jail-helpers [
+in lib.pipe combinators [
   # collect opts
   getOpts
   (lib.foldl (acc: el: el acc) initial-state)
 
   # finalize state
-  (with jail-helpers; compose [
+  (with combinators; compose [
     (s: set-env "PATH" s.path s)
     (s: if s.new-session then unsafe-add-raw-args "--new-session" s else s)
     (s: lib.foldr (envVar:
