@@ -55,16 +55,19 @@ in rec {
     (readonly (noescape "/sys"))
     (unsafe-add-raw-args "--dev-bind /dev/dri /dev/dri")
   ];
-  network = state: compose [
-    (readonly "/etc/hosts")
+  time-zone = compose [
     (unsafe-add-raw-args "--symlink \"$(readlink /etc/localtime)\" /etc/localtime")
+    (readonly "/etc/static/zoneinfo")
+    (readonly "/etc/zoneinfo")
+  ];
+  network = state: compose [
+    time-zone
+    (readonly "/etc/hosts")
     (readonly "/etc/nsswitch.conf")
     (readonly "/etc/resolv.conf")
     (readonly "/etc/ssl")
     (readonly "/etc/static/nsswitch.conf")
     (readonly "/etc/static/ssl")
-    (readonly "/etc/static/zoneinfo")
-    (readonly "/etc/zoneinfo")
     (write-text "/etc/hostname" "${state.hostname}\n")
     (unsafe-add-raw-args "--share-net --hostname ${escape state.hostname}")
   ] state;
