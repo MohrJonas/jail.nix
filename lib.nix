@@ -23,6 +23,7 @@
     new-session = true;
     hostname = "jail";
     env = {};
+    namespaces = {};
   };
 in lib.pipe initial-state (
   # apply pre-user combinators
@@ -33,7 +34,6 @@ in lib.pipe initial-state (
     (unsafe-add-raw-args "--tmpfs ~")
     (unsafe-add-raw-args "--clearenv")
     (unsafe-add-raw-args "--die-with-parent")
-    (unsafe-add-raw-args "--unshare-all")
     (readonly "/nix/store")
     (readonly "/bin/sh")
     (fwd-env "LANG")
@@ -58,6 +58,15 @@ in lib.pipe initial-state (
 
   # apply post-user combinators
   ++ (with combinators; [
+    (s:
+      # See `--unshare-*` from man bwrap
+      lib.pipe ["user" "ipc" "pid" "net" "uts" "cgroup"] [
+        (lib.filter (ns: !(s.namespaces.${ns} or false)))
+        (map (ns: "--unshare-${ns}"))
+        (builtins.concatStringsSep " ")
+        unsafe-add-raw-args
+      ] s
+    )
     (s: set-env "PATH" s.path s)
     (s: if s.new-session then unsafe-add-raw-args "--new-session" s else s)
     (s: lib.foldr (envVar:

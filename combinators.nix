@@ -13,6 +13,7 @@ in rec {
   add-pkg-deps = pkgs: compose (builtins.map (pkg: add-path "${pkg}/bin") pkgs);
   no-new-session = state: state // { new-session = false; };
   set-env = name: value: state: state // { env = state.env // { ${name} = escape value; }; };
+  share-ns = namespace: state: state // { namespaces = state.namespaces // { ${namespace} = true; }; };
 
   set-hostname = hostname: state: state // { inherit hostname; };
 
@@ -62,6 +63,7 @@ in rec {
   ];
   network = state: compose [
     time-zone
+    (share-ns "net")
     (readonly "/etc/hosts")
     (readonly "/etc/nsswitch.conf")
     (readonly "/etc/resolv.conf")
@@ -69,7 +71,7 @@ in rec {
     (readonly "/etc/static/nsswitch.conf")
     (readonly "/etc/static/ssl")
     (write-text "/etc/hostname" "${state.hostname}\n")
-    (unsafe-add-raw-args "--share-net --hostname ${escape state.hostname}")
+    (unsafe-add-raw-args "--hostname ${escape state.hostname}")
   ] state;
   dbus-unsafe = compose [
     (readonly (noescape "\"$XDG_RUNTIME_DIR/bus\""))
