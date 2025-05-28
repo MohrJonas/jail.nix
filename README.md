@@ -27,7 +27,7 @@ A helper to make it easy and ergonomic to wrap your derivations in
       # Give program access to the network
       network
 
-      # Allow program to talk to create windows
+      # Allow program to create windows
       gui
 
       # Give program access to the GPU
