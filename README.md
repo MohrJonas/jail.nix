@@ -20,9 +20,7 @@ A helper to make it easy and ergonomic to wrap your derivations in
     '';
   in {
     packages.x86_64-linux.jailed = jail "my-jail" untrusted-package (combinators: with combinators; [
-      # By default, only the bare minimum permissions are exposed, in this list
-      # you can add additional permissions that you want the program to have.
-      # See ./combinators.nix for more functions that can go here
+      # See combinators section below for more functions that can go here
 
       # Give program access to the network
       network
@@ -43,3 +41,11 @@ A helper to make it easy and ergonomic to wrap your derivations in
   };
 }
 ```
+
+## Combinators
+
+By default, only the bare minimum permissions are exposed. By passing
+combinators into the jail you can modify the jail to expose more permissions.
+
+[Click here](https://alexdav.id/projects/jail-nix/combinators/) for a full list
+of combinators and their documentation.
