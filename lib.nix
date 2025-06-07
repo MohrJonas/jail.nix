@@ -1,4 +1,4 @@
-{ pkgs, name, exe, getOpts }: let
+{ pkgs, name, exe, applyCombinators }: let
   inherit (pkgs) lib;
 
   helpers = rec {
@@ -52,7 +52,7 @@ in lib.pipe initial-state (
   ])
 
   # apply user combinators
-  ++ getOpts combinators
+  ++ applyCombinators combinators
 
   # apply post-user combinators
   ++ (with combinators; [

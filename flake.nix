@@ -3,13 +3,13 @@
     lib = let
       runJail = import ./lib.nix;
     in {
-      init = pkgs: name: exe: getOpts: runJail {
-        inherit pkgs name exe getOpts;
+      init = pkgs: name: exe: applyCombinators: runJail {
+        inherit pkgs name exe applyCombinators;
       };
 
-      extend = { pkgs, additionalCombinators }: name: exe: getOpts: runJail {
+      extend = { pkgs, additionalCombinators }: name: exe: applyCombinators: runJail {
         inherit pkgs name exe;
-        getOpts = combinators: getOpts (combinators // additionalCombinators combinators);
+        applyCombinators = combinators: applyCombinators (combinators // additionalCombinators combinators);
       };
     };
   };
