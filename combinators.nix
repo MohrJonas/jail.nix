@@ -133,7 +133,11 @@
       This can write to `$RUNTIME_ARGS` to push additional bubblewrap flags
       dependant on runtime conditions.
 
-      For example:
+      Note that anything added here is *not* run inside the jail. To run
+      arbitrary things at runtime inside the jail see
+      [wrap-entry](#wrap-entry).
+
+      Example:
       ```nix
       add-runtime ${"''"}
         # binds /foo only if /bar exists on the host
@@ -145,6 +149,35 @@
     '';
     impl = _:
       runtime: state: state // { runtime = "${state.runtime}\n${runtime}\n"; }
+    ;
+  };
+
+  wrap-entry = {
+    sig = "(String -> String) -> Combinator";
+    doc = ''
+      Wraps the binary to be jailed in a bash script that will be the new
+      entrypoint to the jail.
+
+      This similar in spirit to the [add-runtime combinator](#add-runtime),
+      except that this runs *inside* the jail, while `add-runtime` runs before
+      the jail starts.
+
+      Example:
+      ```nix
+      wrap-entry (entry: ${"''"}
+        echo 'Inside the jail!'
+        ''${entry}
+        echo 'Cleaning up...'
+      ${"''"})
+      ```
+    '';
+    impl = _:
+      getWrapper: state: state // {
+        entry = lib.getExe (pkgs.writeShellApplication {
+          name = "${state.name}-jail-wrapper";
+          text = getWrapper state.entry;
+        });
+      }
     ;
   };
 

@@ -1,8 +1,6 @@
 { pkgs, name, exe, getOpts }: let
   inherit (pkgs) lib;
 
-  exe-str = if builtins.typeOf exe == "string" then lib.escapeShellArg exe else lib.getExe exe;
-
   helpers = rec {
     dataDir = "~/.local/share/jail.nix";
     dataDirSubPath = subPath: "${dataDir}/${combinators.escape subPath}";
@@ -13,7 +11,9 @@
       (import ./combinators.nix { inherit pkgs lib helpers; });
 
   initial-state = {
+    name = name;
     cmd = "${lib.getExe pkgs.bubblewrap}";
+    entry = if builtins.typeOf exe == "string" then lib.escapeShellArg exe else lib.getExe exe;
     path = "${pkgs.coreutils}/bin";
     argv = "\"$@\"";
     runtime = "";
@@ -77,7 +77,7 @@ in lib.pipe initial-state (
     (state: ''
       RUNTIME_ARGS=()
       ${state.runtime}
-      exec ${state.cmd} "''${RUNTIME_ARGS[@]}" -- ${exe-str} ${state.argv}
+      exec ${state.cmd} "''${RUNTIME_ARGS[@]}" -- ${state.entry} ${state.argv}
     '')
     (text: pkgs.writeShellApplication { inherit name text; })
 
