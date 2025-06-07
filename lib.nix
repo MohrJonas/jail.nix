@@ -38,14 +38,14 @@ in lib.pipe initial-state (
     (fwd-env "TERM")
 
     (add-runtime ''
-     if [ ! -e ${helpers.dataDirSubPath "passwd"} ] || [ ! -e ${helpers.dataDirSubPath "group"} ]; then
-     mkdir -p ${helpers.dataDir}
-     echo "root:x:0:0:System administrator:/root:$(which nologin)" > ${helpers.dataDirSubPath "passwd"}
-     echo "$(id -un):x:$(id -u):$(id -g)::$HOME:$(which nologin)" >> ${helpers.dataDirSubPath "passwd"}
-     echo "root:x:0:" > ${helpers.dataDirSubPath "group"}
-     echo "$(id -gn):x:$(id -g):" >> ${helpers.dataDirSubPath "group"}
-     fi
-     '')
+      if [ ! -e ${helpers.dataDirSubPath "passwd"} ] || [ ! -e ${helpers.dataDirSubPath "group"} ]; then
+        mkdir -p ${helpers.dataDir}
+        echo "root:x:0:0:System administrator:/root:$(which nologin)" > ${helpers.dataDirSubPath "passwd"}
+        echo "$(id -un):x:$(id -u):$(id -g)::$HOME:$(which nologin)" >> ${helpers.dataDirSubPath "passwd"}
+        echo "root:x:0:" > ${helpers.dataDirSubPath "group"}
+        echo "$(id -gn):x:$(id -g):" >> ${helpers.dataDirSubPath "group"}
+      fi
+    '')
     (ro-bind (noescape (helpers.dataDirSubPath "passwd")) "/etc/passwd")
     (ro-bind (noescape (helpers.dataDirSubPath "group")) "/etc/group")
   ])
