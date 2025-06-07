@@ -338,24 +338,72 @@
   gui = {
     sig = "Combinator";
     doc = ''
-      Exposes everything required to get gui applications to work normally.
+      Exposes everything required to get graphical applications to work.
+
+      This composes [pulse](#pulse), [pipewire](#pipewire),
+      [wayland](#wayland), and forwards/binds a few other paths to get fonts
+      and cursor to render correctly.
     '';
     impl = combinators: with combinators;
       compose [
-        (readonly (noescape "/etc/fonts"))
-        (readonly (noescape "\"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""))
-        (readwrite (noescape "\"$XDG_RUNTIME_DIR/pulse\""))
-        (readonly (noescape "~/.config/dconf"))
-        (try-fwd-env "DISPLAY")
-        (fwd-env "WAYLAND_DISPLAY")
+        pulse
+        pipewire
+        wayland
         (fwd-env "XDG_RUNTIME_DIR")
-        (fwd-env "XDG_SESSION_TYPE")
+        (readonly (noescape "/etc/fonts"))
+        (readonly (noescape "~/.config/dconf"))
 
         # Cursor
         (fwd-env "XCURSOR_THEME")
         (fwd-env "XCURSOR_PATH")
         (fwd-env "XCURSOR_SIZE")
         (readonly (noescape "/etc/profiles/per-user/\"$USER\"/share/icons")) # TODO - this is from XCURSOR_PATH, maybe readonly these paths?
+      ]
+    ;
+  };
+
+  wayland = {
+    sig = "Combinator";
+    doc = ''
+      Exposes your wayland compositor to the jail.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        (fwd-env "WAYLAND_DISPLAY")
+        (fwd-env "XDG_RUNTIME_DIR")
+        (fwd-env "XDG_SESSION_TYPE")
+        (readonly (noescape "\"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""))
+      ]
+    ;
+  };
+
+  unsafe-x11 = {
+    sig = "Combinator";
+    doc = ''
+      Exposes X11 to the jailed application.
+
+      Note that applications may be able to break out of the jail because X11
+      is not designed to be a security boundary.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        (fwd-env "DISPLAY")
+        (readwrite "/tmp/.X11-unix")
+      ]
+    ;
+  };
+
+  pulse = {
+    sig = "Combinator";
+    doc = ''
+      Exposes pulseaudio to the jailed application.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        (fwd-env "XDG_RUNTIME_DIR")
+        (try-fwd-env "PULSE_SERVER")
+        (unsafe-add-raw-args "--bind-try /run/pulse /run/pulse")
+        (unsafe-add-raw-args "--bind-try \"$XDG_RUNTIME_DIR/pulse\" \"$XDG_RUNTIME_DIR/pulse\"")
       ]
     ;
   };
@@ -367,7 +415,7 @@
     '';
     impl = combinators: with combinators;
       compose [
-        # TODO - fwd-env XDG_RUNTIME_DIR but first it should update a record in state instead of appending args
+        (fwd-env "XDG_RUNTIME_DIR")
         (unsafe-add-raw-args "--bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\"")
         (unsafe-add-raw-args "--bind-try /run/pipewire /run/pipewire")
       ]
