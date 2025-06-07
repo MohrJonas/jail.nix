@@ -47,7 +47,7 @@
         inherit pkgs;
         additionalCombinators = combinators: with combinators; {
           # a combinator that binds the passed path to /foo
-          my-combinator = path: unsafe-add-raw-args "--bind ''${escape path}" "/foo"
+          my-combinator = path: unsafe-add-raw-args "--bind ''${escape path} /foo"
         };
       }
       ```
