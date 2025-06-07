@@ -429,7 +429,7 @@
     ;
   };
 
-  dbus-unsafe = {
+  unsafe-dbus = {
     sig = "Combinator";
     doc = ''
       Exposes D-Bus to the jailed program.
@@ -512,5 +512,12 @@
           (rw-bind (noescape "~/.local/share/jails/${lib.escapeShellArg name}") (noescape "~"))
         ])
     ;
+  };
+
+  dbus-unsafe = {
+    deprecated = true;
+    impl = combinators:
+      lib.warn "dbus-unsafe is deprecated, use unsafe-dbus instead"
+      combinators.unsafe-dbus;
   };
 }
