@@ -3,9 +3,23 @@
   # want to depend on nixpkgs
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
 
-  outputs = { nixpkgs, ... }: let
+  outputs = { self, nixpkgs, ... }: let
     pkgs = import nixpkgs { system = "x86_64-linux"; };
     lib = pkgs.lib;
+
+    formatCombinatorDoc = name: combinatorObj: let
+      attrPos = builtins.unsafeGetAttrPos "impl" combinatorObj;
+      file = lib.removePrefix (toString ./..) attrPos.file;
+    in ''
+      ## ${name}
+      **${name} :: ${combinatorObj.sig}**
+
+      ${if self ? rev then "[Source](https://git.sr.ht/~alexdavid/jail.nix/tree/${self.rev}${file}#L${toString attrPos.line})" else ""}
+
+      ${combinatorObj.doc}
+
+      ---
+    '';
 
     combinatorDocs = lib.pipe
       {
@@ -16,7 +30,7 @@
       [
         (import ../combinators.nix)
         (lib.filterAttrs (_: v: !(v ? deprecated && v.deprecated)))
-        (lib.mapAttrsToList (k: v: "## ${k}\n**${k} :: ${v.sig}**\n\n${v.doc}"))
+        (lib.mapAttrsToList formatCombinatorDoc)
         (lib.concatStringsSep "\n\n")
         (docs: "# Combinators\n\n${docs}")
       ];
