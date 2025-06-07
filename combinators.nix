@@ -410,6 +410,35 @@
     ;
   };
 
+  xwayland = {
+    sig = "Combinator";
+    doc = ''
+      Safely allow X11 apps to render to a wayland compositor.
+
+      This combinator runs
+      [xwayland-satellite](https://github.com/Supreeeme/xwayland-satellite)
+      *inside the jail* and only exposes [wayland combinator](#wayland).
+
+      This has the advantage of not allowing multiple jailed X11 applicaitons
+      to see each other since each jailed applicaiton gets its own
+      xwayland-satelite server.
+
+      However, doing it this way does mean that every jailed applicaiton you
+      run with this combinator will spin up its own personal xwayland-satelite
+      server, which will consume more resources than having a global one.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        wayland
+        (set-env "DISPLAY" ":42")
+        (wrap-entry (entry: ''
+          ${lib.getExe pkgs.xwayland-satellite} :42 &
+          ${entry}
+        ''))
+      ]
+    ;
+  };
+
   unsafe-x11 = {
     sig = "Combinator";
     doc = ''
@@ -417,6 +446,9 @@
 
       Note that applications may be able to break out of the jail because X11
       is not designed to be a security boundary.
+
+      For a safer alternative, consider using the [xwayland](#xwayland)
+      combinator inside of a wayland compositor.
     '';
     impl = combinators: with combinators;
       compose [
