@@ -18,7 +18,12 @@ in rec {
   set-hostname = hostname: state: state // { inherit hostname; };
 
   tmpfs = path: unsafe-add-raw-args "--tmpfs ${escape path}";
-  camera = unsafe-add-raw-args "--dev-bind /dev/video0 /dev/video0";
+  camera = add-runtime ''
+    for v in /dev/video*; do
+      [ -e "$v" ] || continue
+      RUNTIME_ARGS+=(--dev-bind "$v" "$v")
+    done
+  '';
 
   # safety: jail/lib.nix asserts that name is a valid shell variable name
   fwd-env = name: set-env name (noescape "\"\$${name}\"");
