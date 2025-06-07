@@ -1,104 +1,516 @@
-{ pkgs, lib, helpers }: let
-  inherit (helpers) escape noescape;
-in rec {
-  # noescape isn't a combinator, but it's a useful helper to expose when defining jails
-  inherit noescape;
+ { pkgs, lib, helpers }: {
+  noescape = {
+    sig = "String -> NoEscapedString";
+    doc = ''
+      Prevent the passed string from being automatically shell escaped.
 
-  compose = helpers: state: lib.pipe state helpers;
+      `escape` and `noescape` aren't combinators, but they are useful helpers
+      to expose when defining jails and writing custom combinators, so they are
+      exposed with the rest of the combinators for convenience.
 
-  unsafe-add-raw-args = args: state: state // { cmd = "${state.cmd} ${args}"; };
-  add-path = path: state: state // { path = "${state.path}:${path}"; };
-  set-argv = argv: state: state // { argv = builtins.concatStringsSep " " (builtins.map escape argv); };
-  add-runtime = runtime: state: state // { runtime = "${state.runtime}\n${runtime}\n"; };
-  add-pkg-deps = pkgs: compose (builtins.map (pkg: add-path "${pkg}/bin") pkgs);
-  no-new-session = state: state // { new-session = false; };
-  set-env = name: value: state: state // { env = state.env // { ${name} = escape value; }; };
-  share-ns = namespace: state: state // { namespaces = state.namespaces // { ${namespace} = true; }; };
+      It is the caller's responsibility to ensure anything passed to this is
+      correctly escaped.
 
-  set-hostname = hostname: state: state // { inherit hostname; };
+      ```nix
+      # Probably doesn't do what you intended since "~/foo" is shell escaped:
+      (readonly "~/foo")
 
-  tmpfs = path: unsafe-add-raw-args "--tmpfs ${escape path}";
-  camera = add-runtime ''
-    for v in /dev/video*; do
-      [ -e "$v" ] || continue
-      RUNTIME_ARGS+=(--dev-bind "$v" "$v")
-    done
-  '';
+      # This properly makes $HOME/foo readonly in the jail:
+      (readonly (noescape "~/foo"))
 
-  # safety: jail/lib.nix asserts that name is a valid shell variable name
-  fwd-env = name: set-env name (noescape "\"\$${name}\"");
-  try-fwd-env = name: set-env name (noescape "\"\${${name}-}\"");
+      # Binds the path specified by the runtime $FOO variable as read only.
+      #
+      # Note that we must properly quote this to ensure bash correctly keeps it
+      # as a single argument, even if it contains spaces:
+      (readonly (noescape "\"$FOO\""))
+      ```
+    '';
+    impl = _:
+      value: { _noescape = value; }
+    ;
+  };
 
-  readonly = path: ro-bind path path;
-  readwrite = path: rw-bind path path;
-  ro-bind = from: to: unsafe-add-raw-args "--ro-bind ${escape from} ${escape to}";
-  rw-bind = from: to: unsafe-add-raw-args "--bind ${escape from} ${escape to}";
-  mount-cwd = unsafe-add-raw-args "--bind \"$PWD\" \"$PWD\"";
-  gui = compose [
-    (readonly (noescape "/etc/fonts"))
-    (readonly (noescape "\"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""))
-    (readwrite (noescape "\"$XDG_RUNTIME_DIR/pulse\""))
-    (readonly (noescape "~/.config/dconf"))
-    (try-fwd-env "DISPLAY")
-    (fwd-env "WAYLAND_DISPLAY")
-    (fwd-env "XDG_RUNTIME_DIR")
-    (fwd-env "XDG_SESSION_TYPE")
+  escape = {
+    sig = "String -> String";
+    doc = ''
+      Shell escapes the passed string.
 
-    # Cursor
-    (fwd-env "XCURSOR_THEME")
-    (fwd-env "XCURSOR_PATH")
-    (fwd-env "XCURSOR_SIZE")
-    (readonly (noescape "/etc/profiles/per-user/\"$USER\"/share/icons")) # TODO - this is from XCURSOR_PATH, maybe readonly these paths?
-  ];
-  pipewire = compose [
-    # TODO - fwd-env XDG_RUNTIME_DIR but first it should update a record in state instead of appending args
-    (unsafe-add-raw-args "--bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\"")
-    (unsafe-add-raw-args "--bind-try /run/pipewire /run/pipewire")
-  ];
-  gpu = compose [
-    (readwrite (noescape "/run/opengl-driver"))
-    (unsafe-add-raw-args "--bind-try /run/opengl-driver-32 /run/opengl-driver-32")
-    (readonly (noescape "/sys"))
-    (unsafe-add-raw-args "--dev-bind /dev/dri /dev/dri")
-  ];
-  time-zone = compose [
-    (unsafe-add-raw-args "--symlink \"$(readlink /etc/localtime)\" /etc/localtime")
-    (readonly "/etc/static/zoneinfo")
-    (readonly "/etc/zoneinfo")
-  ];
-  network = state: compose [
-    time-zone
-    (share-ns "net")
-    (readonly "/etc/hosts")
-    (readonly "/etc/nsswitch.conf")
-    (readonly "/etc/resolv.conf")
-    (readonly "/etc/ssl")
-    (readonly "/etc/static/nsswitch.conf")
-    (readonly "/etc/static/ssl")
-    (write-text "/etc/hostname" "${state.hostname}\n")
-    (unsafe-add-raw-args "--hostname ${escape state.hostname}")
-  ] state;
-  dbus-unsafe = compose [
-    (readonly (noescape "\"$XDG_RUNTIME_DIR/bus\""))
-    (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"$DBUS_SESSION_BUS_ADDRESS\""))
-  ];
-  bind-pkg = path: pkg: ro-bind (toString pkg) path;
-  write-text = path: contents:
-    bind-pkg
-      path
-      (pkgs.writeText "jail-write-text-${lib.strings.sanitizeDerivationName (escape path)}" contents);
+      Use [noescape](#noescape) to prevent escaping.
 
-  persist-home = name: compose [
-    (add-runtime "mkdir -p ${helpers.dataDirSubPath "home/${name}"}")
-    (rw-bind (noescape (helpers.dataDirSubPath "home/${name}")) (noescape "~"))
-  ];
+      `escape` and `noescape` aren't combinators, but they are useful helpers
+      to expose when defining jails and writing custom combinators, so they are
+      exposed with the rest of the combinators for convenience.
+
+      Example:
+      ```nix
+      jail-nix.lib.extend {
+        inherit pkgs;
+        additionalCombinators = combinators: with combinators; {
+          # a combinator that binds the passed path to /foo
+          my-combinator = path: unsafe-add-raw-args "--bind ''${escape path}" "/foo"
+        };
+      }
+      ```
+    '';
+    impl = _:
+      rawOrStr:
+        if builtins.typeOf rawOrStr == "set" && rawOrStr ? _noescape
+        then rawOrStr._noescape
+        else lib.strings.escapeShellArg rawOrStr
+    ;
+  };
+
+  compose = {
+    sig = "[Combinator] -> Combinator";
+    doc = ''
+      Allows combinator composition.
+
+      `compose [ a b c ]` combines `a`, `b`, and `c`.
+
+      This is useful when writing your own combinators, for example when using
+      `jail-nix.lib.extend`:
+
+      ```nix
+      jail-nix.lib.extend {
+        inherit pkgs;
+        additionalCombinators = combinators: with combinators; {
+          mycombinator = compose [
+            (readonly "/foo")
+            (readonly "/bar")
+            gpu
+          ];
+        };
+      }
+      ```
+    '';
+    impl = _:
+      lib.flip lib.pipe
+    ;
+  };
+
+  unsafe-add-raw-args = {
+    sig = "String -> Combinator";
+    doc = ''
+      Adds the raw string passed into it into the call to bubblewrap.
+
+      Nothing is escaped, it is the caller's responsibility to ensure
+      everything is properly escaped.
+    '';
+    impl = _:
+      args: state: state // { cmd = "${state.cmd} ${args}"; }
+    ;
+  };
+
+  add-path = {
+    sig = "String -> Combinator";
+    doc = ''
+      Appends the passed string to `$PATH`.
+    '';
+    impl = _:
+      path: state: state // { path = "${state.path}:${path}"; }
+    ;
+  };
+
+   set-argv = {
+    sig = "[String] -> Combinator";
+    doc = ''
+      Overrides the current argv that is passed to the jailed executable.
+
+      By default argv is set to `noescape "$@"` which will forward whatever
+      arguments are provided to the wrapper script at runtime. Calling this
+      will override the current value.
+    '';
+    impl = combinators: with combinators;
+      argv: state: state // { argv = builtins.concatStringsSep " " (builtins.map escape argv); }
+    ;
+  };
+
+  add-runtime = {
+    sig = "String -> Combinator";
+    doc = ''
+      Adds arbitrary logic to run at runtime, before the jail starts.
+
+      This can write to `$RUNTIME_ARGS` to push additional bubblewrap flags
+      dependant on runtime conditions.
+
+      For example:
+      ```nix
+      add-runtime ${"''"}
+        # binds /foo only if /bar exists on the host
+        if [ -e /bar ]; then
+          RUNTIME_ARGS+=(--bind /foo /foo)
+        fi
+      ${"''"}
+      ```
+    '';
+    impl = _:
+      runtime: state: state // { runtime = "${state.runtime}\n${runtime}\n"; }
+    ;
+  };
+
+  add-pkg-deps = {
+    sig = "[Package] -> Combinator";
+    doc = ''
+      Adds the packages' `bin` directory to `$PATH`.
+    '';
+    impl = combinators: with combinators;
+      pkgs: compose (builtins.map (pkg: add-path "${lib.getBin pkg}/bin") pkgs)
+    ;
+  };
+
+  no-new-session = {
+    sig = "Combinator";
+    doc = ''
+      Disables `--new-session`
+
+      By default, jail-nix includes the `--new-session` bwrap flag. Doing this
+      prevents a jailed application from being able to feed keyboard input to
+      the terminal, however this may break some TUI applications.
+
+      See BWRAP(1) for more information and security implications.
+    '';
+    impl = _:
+      state: state // { new-session = false; }
+    ;
+  };
+
+  set-env = {
+    sig = "String -> String -> Combinator";
+    doc = ''
+      Sets the specified environment variable in the jail.
+
+      This will throw if the variable name is not a valid posix variable name.
+    '';
+    impl = combinators: with combinators;
+      name: value: state: state // { env = state.env // { ${name} = escape value; }; }
+    ;
+  };
+
+  share-ns = {
+    sig = "String -> Combinator";
+    doc = ''
+      Removes the call to `--unshare-` for the provided namespace.
+
+      By default, jail-nix unshares all namespaces, calling `share-ns "pid"`
+      will remove the `--unshare-pid` flag from bwrap which will allow this
+      process to share the same pid namespace as the host.
+
+      See BWRAP(1) for more information.
+    '';
+    impl = _:
+      namespace: state: state // { namespaces = state.namespaces // { ${namespace} = true; }; }
+    ;
+  };
+
+  set-hostname = {
+    sig = "String -> Combinator";
+    doc = ''
+      Sets the hostname to use for the `network` combinator.
+
+      Must be specified before `network`.
+
+      Example:
+      ```nix
+      [
+        (set-hostname "foo")
+        network
+      ]
+      ```
+    '';
+    impl = _:
+      hostname: state: state // { inherit hostname; }
+    ;
+  };
+
+  tmpfs = {
+    sig = "String -> Combinator";
+    doc = ''
+      Mounts a new tmpfs at the specified location.
+    '';
+    impl = combinators: with combinators;
+      path: unsafe-add-raw-args "--tmpfs ${escape path}"
+    ;
+  };
+
+  camera = {
+    sig = "Combinator";
+    doc = ''
+      Allows access to webcams and other V4L2 video devices at `/dev/video*`.
+    '';
+    impl = combinators: with combinators;
+      add-runtime ''
+        for v in /dev/video*; do
+          [ -e "$v" ] || continue
+          RUNTIME_ARGS+=(--dev-bind "$v" "$v")
+        done
+      ''
+    ;
+  };
+
+  fwd-env = {
+    sig = "String -> Combinator";
+    doc = ''
+      Forwards the specified environment variable to the underlying process.
+
+      If the env var is not set when the jailed application is run, it will
+      exit non-zero.
+
+      If you want to be tolerant of the environment being unset, use
+      [try-fwd-env](#try-fwd-env) instead.
+    '';
+    impl = combinators: with combinators;
+      name: set-env name (noescape "\"\$${name}\"")
+    ;
+  };
+
+  try-fwd-env = {
+    sig = "String -> Combinator";
+    doc = ''
+      Forwards the specified environment variable to the underlying process (if set).
+    '';
+    impl = combinators: with combinators;
+      name: set-env name (noescape "\"\${${name}-}\"")
+    ;
+  };
+
+  readonly = {
+    sig = "String -> Combinator";
+    doc = ''
+      Binds the specified path in the jail as read-only.
+    '';
+    impl = combinators: with combinators;
+      path: ro-bind path path
+    ;
+  };
+
+  readwrite = {
+    sig = "String -> Combinator";
+    doc = ''
+      Binds the specified path in the jail as read-write.
+    '';
+    impl = combinators: with combinators;
+      path: rw-bind path path
+    ;
+  };
+
+  ro-bind = {
+    sig = "String -> String -> Combinator";
+    doc = ''
+      Binds the specified path on the host to a path in the jail as read-only.
+
+      Example:
+      ```nix
+      # Binds /foo on the host to /bar in the jail
+      ro-bind "/foo" "/bar"
+      ```
+    '';
+    impl = combinators: with combinators;
+      from: to: unsafe-add-raw-args "--ro-bind ${escape from} ${escape to}"
+    ;
+  };
+
+  rw-bind = {
+    sig = "String -> String -> Combinator";
+    doc = ''
+      Binds the specified path on the host to a path in the jail as read-write.
+
+      Example:
+      ```nix
+      # Binds /foo on the host to /bar in the jail
+      rw-bind "/foo" "/bar"
+      ```
+    '';
+    impl = combinators: with combinators;
+      from: to: unsafe-add-raw-args "--bind ${escape from} ${escape to}"
+    ;
+  };
+
+  mount-cwd = {
+    sig = "Combinator";
+    doc = ''
+      Bind mounts the runtime working directory as read-write.
+    '';
+    impl = combinators: with combinators;
+      unsafe-add-raw-args "--bind \"$PWD\" \"$PWD\""
+    ;
+  };
+
+  gui = {
+    sig = "Combinator";
+    doc = ''
+      Exposes everything required to get gui applications to work normally.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        (readonly (noescape "/etc/fonts"))
+        (readonly (noescape "\"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""))
+        (readwrite (noescape "\"$XDG_RUNTIME_DIR/pulse\""))
+        (readonly (noescape "~/.config/dconf"))
+        (try-fwd-env "DISPLAY")
+        (fwd-env "WAYLAND_DISPLAY")
+        (fwd-env "XDG_RUNTIME_DIR")
+        (fwd-env "XDG_SESSION_TYPE")
+
+        # Cursor
+        (fwd-env "XCURSOR_THEME")
+        (fwd-env "XCURSOR_PATH")
+        (fwd-env "XCURSOR_SIZE")
+        (readonly (noescape "/etc/profiles/per-user/\"$USER\"/share/icons")) # TODO - this is from XCURSOR_PATH, maybe readonly these paths?
+      ]
+    ;
+  };
+
+  pipewire = {
+    sig = "Combinator";
+    doc = ''
+      Exposes pipewire to the jailed application.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        # TODO - fwd-env XDG_RUNTIME_DIR but first it should update a record in state instead of appending args
+        (unsafe-add-raw-args "--bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\"")
+        (unsafe-add-raw-args "--bind-try /run/pipewire /run/pipewire")
+      ]
+    ;
+  };
+
+  gpu = {
+    sig = "Combinator";
+    doc = ''
+      Exposes the gpu to jailed application.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        (readwrite (noescape "/run/opengl-driver"))
+        (unsafe-add-raw-args "--bind-try /run/opengl-driver-32 /run/opengl-driver-32")
+        (readonly (noescape "/sys"))
+        (unsafe-add-raw-args "--dev-bind /dev/dri /dev/dri")
+      ]
+    ;
+  };
+
+  time-zone = {
+    sig = "Combinator";
+    doc = ''
+      Exposes your timezone.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        (unsafe-add-raw-args "--symlink \"$(readlink /etc/localtime)\" /etc/localtime")
+        (readonly "/etc/static/zoneinfo")
+        (readonly "/etc/zoneinfo")
+      ]
+    ;
+  };
+
+  network = {
+    sig = "Combinator";
+    doc = ''
+      Grants network access to the jail.
+
+      This also exposes everything required to allow TLS connections.
+
+      You can set your desired hostname with [set-hostname](#set-hostname). The
+      default is `jail`.
+    '';
+    impl = combinators: with combinators;
+      state: compose [
+        time-zone
+        (share-ns "net")
+        (readonly "/etc/hosts")
+        (readonly "/etc/nsswitch.conf")
+        (readonly "/etc/resolv.conf")
+        (readonly "/etc/ssl")
+        (readonly "/etc/static/nsswitch.conf")
+        (readonly "/etc/static/ssl")
+        (write-text "/etc/hostname" "${state.hostname}\n")
+        (unsafe-add-raw-args "--hostname ${escape state.hostname}")
+      ] state
+    ;
+  };
+
+  dbus-unsafe = {
+    sig = "Combinator";
+    doc = ''
+      Exposes D-Bus to the jailed program.
+
+      This does no message filtering so it is marked as unsafe. In the future
+      this library will include a combinator that uses
+      [xdg-dbus-proxy](https://github.com/flatpak/xdg-dbus-proxy) to specify a
+      set of allowed messages.
+    '';
+    impl = combinators: with combinators;
+      compose [
+        (readonly (noescape "\"$XDG_RUNTIME_DIR/bus\""))
+        (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"$DBUS_SESSION_BUS_ADDRESS\""))
+      ]
+    ;
+  };
+
+  bind-pkg = {
+    sig = "String -> Package -> Combinator";
+    doc = ''
+      Bind mounts the passed derivation at a specified location.
+
+      Example:
+      ```nix
+      bind-pkg "/foo" (pkgs.writeText "foo" "bar")
+      ```
+    '';
+    impl = combinators: with combinators;
+      path: pkg: ro-bind (toString pkg) path
+    ;
+  };
+
+  write-text = {
+    sig = "String -> String -> Combinator";
+    doc = ''
+      Bind mounts a read-only text file at a path.
+
+      Example:
+      ```nix
+      # This will create a text file in the jail at `/hello.txt`
+      write-text "/hello.txt" "Hello, world!"
+      ```
+    '';
+    impl = combinators: with combinators;
+      path: contents:
+        bind-pkg
+          path
+          (pkgs.writeText "jail-write-text-${lib.strings.sanitizeDerivationName (escape path)}" contents)
+    ;
+  };
+
+  persist-home = {
+    sig = "String -> Combinator";
+    doc = ''
+      Persists the home directory across all jails with the specified name.
+
+      This is useful for a lot of software that may want to write arbitrary
+      things into your home directory and expect to read them back in a future
+      invocation.
+
+      The home directory is persisted in `~/.local/share/jail.nix/home/<name>`.
+    '';
+    impl = combinators: with combinators;
+      name: compose [
+        (add-runtime "mkdir -p ${helpers.dataDirSubPath "home/${name}"}")
+        (rw-bind (noescape (helpers.dataDirSubPath "home/${name}")) (noescape "~"))
+      ]
+    ;
+  };
 
   ############################################
   # deprecated
-  persisthome = name: helpers.deprecatedCombinator
-    "persisthome is deprecated, use persist-home instead. When doing so, rename ~/.local/share/jails/${name} to ${helpers.dataDirSubPath "home/${name}"}"
-    (compose [
-      (add-runtime "mkdir -p ~/.local/share/jails/${lib.escapeShellArg name}")
-      (rw-bind (noescape "~/.local/share/jails/${lib.escapeShellArg name}") (noescape "~"))
-    ]);
+  persisthome = {
+    deprecated = true;
+    impl = combinators: with combinators;
+      name:
+        lib.warn "persisthome is deprecated, use persist-home instead. When doing so, rename ~/.local/share/jails/${name} to ${helpers.dataDirSubPath "home/${name}"}"
+        (compose [
+          (add-runtime "mkdir -p ~/.local/share/jails/${lib.escapeShellArg name}")
+          (rw-bind (noescape "~/.local/share/jails/${lib.escapeShellArg name}") (noescape "~"))
+        ])
+    ;
+  };
 }

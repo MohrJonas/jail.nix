@@ -4,16 +4,13 @@
   exe-str = if builtins.typeOf exe == "string" then lib.escapeShellArg exe else lib.getExe exe;
 
   helpers = rec {
-    escape = rawOrStr: if builtins.typeOf rawOrStr == "string" then lib.strings.escapeShellArg rawOrStr else rawOrStr.raw;
-    noescape = value: { raw = value; };
     dataDir = "~/.local/share/jail.nix";
-    dataDirSubPath = subPath: "${dataDir}/${escape subPath}";
-    deprecatedCombinator = message: combinator: lib.warn "jail ${name}: ${message}" combinator;
+    dataDirSubPath = subPath: "${dataDir}/${combinators.escape subPath}";
   };
 
-  combinators = import ./combinators.nix {
-    inherit pkgs lib helpers;
-  };
+  combinators = lib.mapAttrs
+      (_: v: v.impl combinators)
+      (import ./combinators.nix { inherit pkgs lib helpers; });
 
   initial-state = {
     cmd = "${lib.getExe pkgs.bubblewrap}";
@@ -59,7 +56,7 @@ in lib.pipe initial-state (
   # apply post-user combinators
   ++ (with combinators; [
     (s:
-      # See `--unshare-*` from man bwrap
+      # See `--unshare-*` in BWRAP(1)
       lib.pipe ["user" "ipc" "pid" "net" "uts" "cgroup"] [
         (lib.filter (ns: !(s.namespaces.${ns} or false)))
         (map (ns: "--unshare-${ns}"))
