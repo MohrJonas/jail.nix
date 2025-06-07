@@ -1,4 +1,4 @@
- { pkgs, lib, helpers }: {
+{ pkgs, lib, helpers }: {
   noescape = {
     sig = "String -> NoEscapedString";
     doc = ''
@@ -85,6 +85,50 @@
     '';
     impl = _:
       lib.flip lib.pipe
+    ;
+  };
+
+  include-once = {
+    sig = "String -> Combinator -> Combinator";
+    doc = ''
+      Only run the passed combinator if include-once hasn't been previously
+      called with the specified key.
+
+      This is useful when writing your own combinators.
+
+      ```nix
+      let
+        jail = jail-nix.lib.extend {
+          inherit pkgs;
+          additionalCombinators = combinators: with combinators; {
+            # foo isn't `include-once` so each call to it adds a new echo
+            foo = add-runtime "echo foo";
+            # bar will only be included once, no matter how many times it is called
+            bar = include-once "bar" (add-runtime "echo bar");
+          };
+        };
+      in
+        # Prints:
+        # foo
+        # foo
+        # foo
+        # bar
+        # Hello, world!
+        jail "test" pkgs.hello (c: with c; [
+          foo
+          foo
+          foo
+          bar
+          bar
+          bar
+        ])
+      ```
+    '';
+    impl = _:
+      key: combinator: state:
+        if lib.elem key state.included-once
+        then state
+        else combinator (state // { included-once = state.included-once ++ [ key ]; })
     ;
   };
 
@@ -271,12 +315,13 @@
       Allows access to webcams and other V4L2 video devices at `/dev/video*`.
     '';
     impl = combinators: with combinators;
-      add-runtime ''
+      include-once "camera"
+      (add-runtime ''
         for v in /dev/video*; do
           [ -e "$v" ] || continue
           RUNTIME_ARGS+=(--dev-bind "$v" "$v")
         done
-      ''
+      '')
     ;
   };
 
@@ -364,7 +409,8 @@
       Bind mounts the runtime working directory as read-write.
     '';
     impl = combinators: with combinators;
-      unsafe-add-raw-args "--bind \"$PWD\" \"$PWD\""
+      include-once "mount-cwd"
+      (unsafe-add-raw-args "--bind \"$PWD\" \"$PWD\"")
     ;
   };
 
@@ -428,14 +474,15 @@
       server, which will consume more resources than having a global one.
     '';
     impl = combinators: with combinators;
-      compose [
+      include-once "xwayland"
+      (compose [
         wayland
         (set-env "DISPLAY" ":42")
         (wrap-entry (entry: ''
           ${lib.getExe pkgs.xwayland-satellite} :42 &
           ${entry}
         ''))
-      ]
+      ])
     ;
   };
 
@@ -464,12 +511,13 @@
       Exposes pulseaudio to the jailed application.
     '';
     impl = combinators: with combinators;
-      compose [
+      include-once "pulse"
+      (compose [
         (fwd-env "XDG_RUNTIME_DIR")
         (try-fwd-env "PULSE_SERVER")
         (unsafe-add-raw-args "--bind-try /run/pulse /run/pulse")
         (unsafe-add-raw-args "--bind-try \"$XDG_RUNTIME_DIR/pulse\" \"$XDG_RUNTIME_DIR/pulse\"")
-      ]
+      ])
     ;
   };
 
@@ -479,11 +527,12 @@
       Exposes pipewire to the jailed application.
     '';
     impl = combinators: with combinators;
-      compose [
+      include-once "pipewire"
+      (compose [
         (fwd-env "XDG_RUNTIME_DIR")
         (unsafe-add-raw-args "--bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\"")
         (unsafe-add-raw-args "--bind-try /run/pipewire /run/pipewire")
-      ]
+      ])
     ;
   };
 
@@ -493,12 +542,13 @@
       Exposes the gpu to jailed application.
     '';
     impl = combinators: with combinators;
-      compose [
+      include-once "gpu"
+      (compose [
         (readwrite (noescape "/run/opengl-driver"))
         (unsafe-add-raw-args "--bind-try /run/opengl-driver-32 /run/opengl-driver-32")
         (readonly (noescape "/sys"))
         (unsafe-add-raw-args "--dev-bind /dev/dri /dev/dri")
-      ]
+      ])
     ;
   };
 
@@ -508,11 +558,12 @@
       Exposes your timezone.
     '';
     impl = combinators: with combinators;
-      compose [
+      include-once "time-zone"
+      (compose [
         (unsafe-add-raw-args "--symlink \"$(readlink /etc/localtime)\" /etc/localtime")
         (readonly "/etc/static/zoneinfo")
         (readonly "/etc/zoneinfo")
-      ]
+      ])
     ;
   };
 
@@ -527,7 +578,8 @@
       default is `jail`.
     '';
     impl = combinators: with combinators;
-      state: compose [
+      include-once "network"
+      (state: compose [
         time-zone
         (share-ns "net")
         (readonly "/etc/hosts")
@@ -538,7 +590,7 @@
         (readonly "/etc/static/ssl")
         (write-text "/etc/hostname" "${state.hostname}\n")
         (unsafe-add-raw-args "--hostname ${escape state.hostname}")
-      ] state
+      ] state)
     ;
   };
 

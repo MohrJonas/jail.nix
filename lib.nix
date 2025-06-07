@@ -21,6 +21,7 @@
     hostname = "jail";
     env = {};
     namespaces = {};
+    included-once = []; # See include-once combinator
   };
 in lib.pipe initial-state (
   # apply pre-user combinators
