@@ -174,8 +174,9 @@
     doc = ''
       Adds arbitrary logic to run at runtime, before the jail starts.
 
-      This can write to `$RUNTIME_ARGS` to push additional bubblewrap flags
-      dependant on runtime conditions.
+      You can push additional bubblewrap arguments by appending the bash
+      array `$RUNTIME_ARGS`. This allows you to modify the bubblewrap flags
+      to be dependent on runtime conditions.
 
       Note that anything added here is *not* run inside the jail. To run
       arbitrary things at runtime inside the jail see
