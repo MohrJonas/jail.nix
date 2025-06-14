@@ -6,9 +6,7 @@
     dataDirSubPath = subPath: "${dataDir}/${combinators.escape subPath}";
   };
 
-  combinators = lib.mapAttrs
-      (_: v: v.impl combinators)
-      (import ./combinators.nix { inherit pkgs lib helpers; });
+  combinators = import ./combinators.nix { inherit pkgs lib helpers; };
 
   initial-state = {
     name = name;

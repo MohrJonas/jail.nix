@@ -1,4 +1,4 @@
-{ pkgs, lib, helpers }: {
+{ pkgs, lib, helpers }: rec {
   noescape = {
     sig = "String -> NoEscapedString";
     doc = ''
@@ -25,7 +25,7 @@
       (readonly (noescape "\"$FOO\""))
       ```
     '';
-    impl = _:
+    __functor = _:
       value: { _noescape = value; }
     ;
   };
@@ -52,7 +52,7 @@
       }
       ```
     '';
-    impl = _:
+    __functor = _:
       rawOrStr:
         if builtins.typeOf rawOrStr == "set" && rawOrStr ? _noescape
         then rawOrStr._noescape
@@ -83,7 +83,7 @@
       }
       ```
     '';
-    impl = _:
+    __functor = _:
       lib.flip lib.pipe
     ;
   };
@@ -124,7 +124,7 @@
         ])
       ```
     '';
-    impl = _:
+    __functor = _:
       key: combinator: state:
         if lib.elem key state.included-once
         then state
@@ -140,7 +140,7 @@
       Nothing is escaped, it is the caller's responsibility to ensure
       everything is properly escaped.
     '';
-    impl = _:
+    __functor = _:
       args: state: state // { cmd = "${state.cmd} ${args}"; }
     ;
   };
@@ -150,7 +150,7 @@
     doc = ''
       Appends the passed string to `$PATH`.
     '';
-    impl = _:
+    __functor = _:
       path: state: state // { path = "${state.path}:${path}"; }
     ;
   };
@@ -164,7 +164,7 @@
       arguments are provided to the wrapper script at runtime. Calling this
       will override the current value.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       argv: state: state // { argv = builtins.concatStringsSep " " (builtins.map escape argv); }
     ;
   };
@@ -192,7 +192,7 @@
       ${"''"}
       ```
     '';
-    impl = _:
+    __functor = _:
       runtime: state: state // { runtime = "${state.runtime}\n${runtime}\n"; }
     ;
   };
@@ -216,7 +216,7 @@
       ${"''"})
       ```
     '';
-    impl = _:
+    __functor = _:
       getWrapper: state: state // {
         entry = lib.getExe (pkgs.writeShellApplication {
           name = "${state.name}-jail-wrapper";
@@ -231,7 +231,7 @@
     doc = ''
       Adds the packages' `bin` directory to `$PATH`.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       pkgs: compose (builtins.map (pkg: add-path "${lib.getBin pkg}/bin") pkgs)
     ;
   };
@@ -247,7 +247,7 @@
 
       See BWRAP(1) for more information and security implications.
     '';
-    impl = _:
+    __functor = _:
       state: state // { new-session = false; }
     ;
   };
@@ -259,7 +259,7 @@
 
       This will throw if the variable name is not a valid posix variable name.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       name: value: state: state // { env = state.env // { ${name} = escape value; }; }
     ;
   };
@@ -275,7 +275,7 @@
 
       See BWRAP(1) for more information.
     '';
-    impl = _:
+    __functor = _:
       namespace: state: state // { namespaces = state.namespaces // { ${namespace} = true; }; }
     ;
   };
@@ -295,7 +295,7 @@
       ]
       ```
     '';
-    impl = _:
+    __functor = _:
       hostname: state: state // { inherit hostname; }
     ;
   };
@@ -305,7 +305,7 @@
     doc = ''
       Mounts a new tmpfs at the specified location.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       path: unsafe-add-raw-args "--tmpfs ${escape path}"
     ;
   };
@@ -315,7 +315,7 @@
     doc = ''
       Allows access to webcams and other V4L2 video devices at `/dev/video*`.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       include-once "camera"
       (add-runtime ''
         for v in /dev/video*; do
@@ -337,7 +337,7 @@
       If you want to be tolerant of the environment being unset, use
       [try-fwd-env](#try-fwd-env) instead.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       name: set-env name (noescape "\"\$${name}\"")
     ;
   };
@@ -347,7 +347,7 @@
     doc = ''
       Forwards the specified environment variable to the underlying process (if set).
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       name: set-env name (noescape "\"\${${name}-}\"")
     ;
   };
@@ -357,7 +357,7 @@
     doc = ''
       Binds the specified path in the jail as read-only.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       path: ro-bind path path
     ;
   };
@@ -367,7 +367,7 @@
     doc = ''
       Binds the specified path in the jail as read-write.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       path: rw-bind path path
     ;
   };
@@ -383,7 +383,7 @@
       ro-bind "/foo" "/bar"
       ```
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       from: to: unsafe-add-raw-args "--ro-bind ${escape from} ${escape to}"
     ;
   };
@@ -399,7 +399,7 @@
       rw-bind "/foo" "/bar"
       ```
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       from: to: unsafe-add-raw-args "--bind ${escape from} ${escape to}"
     ;
   };
@@ -409,7 +409,7 @@
     doc = ''
       Bind mounts the runtime working directory as read-write.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       include-once "mount-cwd"
       (unsafe-add-raw-args "--bind \"$PWD\" \"$PWD\"")
     ;
@@ -424,7 +424,7 @@
       [wayland](#wayland), and forwards/binds a few other paths to get fonts
       and cursor to render correctly.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       compose [
         pulse
         pipewire
@@ -447,7 +447,7 @@
     doc = ''
       Exposes your wayland compositor to the jail.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       compose [
         (fwd-env "WAYLAND_DISPLAY")
         (fwd-env "XDG_RUNTIME_DIR")
@@ -474,7 +474,7 @@
       run with this combinator will spin up its own personal xwayland-satelite
       server, which will consume more resources than having a global one.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       include-once "xwayland"
       (compose [
         wayland
@@ -498,7 +498,7 @@
       For a safer alternative, consider using the [xwayland](#xwayland)
       combinator inside of a wayland compositor.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       compose [
         (fwd-env "DISPLAY")
         (readwrite "/tmp/.X11-unix")
@@ -511,7 +511,7 @@
     doc = ''
       Exposes pulseaudio to the jailed application.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       include-once "pulse"
       (compose [
         (fwd-env "XDG_RUNTIME_DIR")
@@ -527,7 +527,7 @@
     doc = ''
       Exposes pipewire to the jailed application.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       include-once "pipewire"
       (compose [
         (fwd-env "XDG_RUNTIME_DIR")
@@ -542,7 +542,7 @@
     doc = ''
       Exposes the gpu to jailed application.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       include-once "gpu"
       (compose [
         (readwrite (noescape "/run/opengl-driver"))
@@ -558,7 +558,7 @@
     doc = ''
       Exposes your timezone.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       include-once "time-zone"
       (compose [
         (unsafe-add-raw-args "--symlink \"$(readlink /etc/localtime)\" /etc/localtime")
@@ -578,7 +578,7 @@
       You can set your desired hostname with [set-hostname](#set-hostname). The
       default is `jail`.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       include-once "network"
       (state: compose [
         time-zone
@@ -605,7 +605,7 @@
       [xdg-dbus-proxy](https://github.com/flatpak/xdg-dbus-proxy) to specify a
       set of allowed messages.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       compose [
         (readonly (noescape "\"$XDG_RUNTIME_DIR/bus\""))
         (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"$DBUS_SESSION_BUS_ADDRESS\""))
@@ -623,7 +623,7 @@
       bind-pkg "/foo" (pkgs.writeText "foo" "bar")
       ```
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       path: pkg: ro-bind (toString pkg) path
     ;
   };
@@ -639,7 +639,7 @@
       write-text "/hello.txt" "Hello, world!"
       ```
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       path: contents:
         bind-pkg
           path
@@ -658,7 +658,7 @@
 
       The home directory is persisted in `~/.local/share/jail.nix/home/<name>`.
     '';
-    impl = combinators: with combinators;
+    __functor = _:
       name: compose [
         (add-runtime "mkdir -p ${helpers.dataDirSubPath "home/${name}"}")
         (rw-bind (noescape (helpers.dataDirSubPath "home/${name}")) (noescape "~"))
@@ -670,7 +670,7 @@
   # deprecated
   persisthome = {
     deprecated = true;
-    impl = combinators: with combinators;
+    __functor = _:
       name:
         lib.warn "persisthome is deprecated, use persist-home instead. When doing so, rename ~/.local/share/jails/${name} to ${helpers.dataDirSubPath "home/${name}"}"
         (compose [
@@ -682,8 +682,8 @@
 
   dbus-unsafe = {
     deprecated = true;
-    impl = combinators:
+    __functor = _:
       lib.warn "dbus-unsafe is deprecated, use unsafe-dbus instead"
-      combinators.unsafe-dbus;
+      unsafe-dbus;
   };
 }

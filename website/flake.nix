@@ -8,7 +8,7 @@
     lib = pkgs.lib;
 
     formatCombinatorDoc = name: combinatorObj: let
-      attrPos = builtins.unsafeGetAttrPos "impl" combinatorObj;
+      attrPos = builtins.unsafeGetAttrPos "__functor" combinatorObj;
       file = lib.removePrefix (toString ./..) attrPos.file;
     in ''
       ## ${name}
