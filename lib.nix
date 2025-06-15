@@ -20,6 +20,7 @@
     env = {};
     namespaces = {};
     included-once = []; # See include-once combinator
+    cleanup = []; # See cleanup combinator
   };
 in lib.pipe initial-state (
   # apply pre-user combinators
@@ -75,8 +76,14 @@ in lib.pipe initial-state (
   ++ [
     (state: ''
       RUNTIME_ARGS=()
+      ${if builtins.length state.cleanup > 0 then ''
+        function cleanup {
+          ${lib.concatStringsSep "\n" state.cleanup}
+        }
+        trap cleanup EXIT
+      '' else ""}
       ${state.runtime}
-      exec ${state.cmd} "''${RUNTIME_ARGS[@]}" -- ${state.entry} ${state.argv}
+      ${if builtins.length state.cleanup > 0 then "" else "exec "}${state.cmd} "''${RUNTIME_ARGS[@]}" -- ${state.entry} ${state.argv}
     '')
     (text: pkgs.writeShellApplication { inherit name text; })
 

@@ -190,10 +190,47 @@
           RUNTIME_ARGS+=(--bind /foo /foo)
         fi
       ${"''"}
+
+      If you create any resources in add-runtime that you want to automatically
+      clean up when the jail exits use [add-cleanup](#add-cleanup).
       ```
     '';
     __functor = _:
       runtime: state: state // { runtime = "${state.runtime}\n${runtime}\n"; }
+    ;
+  };
+
+  add-cleanup = {
+    sig = "String -> Combinator";
+    doc = ''
+      Adds arbitrary logic to run when the jail exits.
+
+      This is designed to be an easy way to register cleanup actions for things
+      created in [add-runtime](#add-runtime). These scripts run in the same
+      scope as `add-runtime` so any shell variables defined there will be in
+      scope.
+
+      The cleanup actions may run even if the runtime doesn't— for example if a
+      previous runtime exits non-zero the jail will exit prematurely, but the
+      cleanup actions will still run.
+
+      Example:
+      ```nix
+      compose [
+        (add-runtime ${"''"}
+          TMP_FILE=$(mktemp)
+          do-something "$TMP_FILE"
+        ${"''"})
+        (add-cleanup ${"''"}
+          if [ -e "''${TMP_FILE-}" ]; then
+            rm "$TMP_FILE"
+          fi
+        ${"''"})
+      ]
+      ```
+    '';
+    __functor = _:
+      cleanup: state: state // { cleanup = state.cleanup ++ [ cleanup ]; }
     ;
   };
 
