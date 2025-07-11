@@ -190,10 +190,10 @@
           RUNTIME_ARGS+=(--bind /foo /foo)
         fi
       ${"''"}
+      ```
 
       If you create any resources in add-runtime that you want to automatically
       clean up when the jail exits use [add-cleanup](#add-cleanup).
-      ```
     '';
     __functor = _:
       runtime: state: state // { runtime = "${state.runtime}\n${runtime}\n"; }
