@@ -22,7 +22,7 @@ list](https://lists.sr.ht/~alexdavid/general).
       ls -la $HOME
     '';
   in {
-    packages.x86_64-linux.jailed = jail "my-jail" untrusted-package (combinators: with combinators; [
+    packages.x86_64-linux.jailed = jail "my-jail" untrusted-package (with jail.combinators; [
       # See combinators section below for more functions that can go here
 
       # Give program access to the network

@@ -70,11 +70,12 @@ following positional arguments:
   be a derivation like `pkgs.hello`, or a string like
   `"${pkgs.hello}/bin/hello"`. If a derivation is passed it will call
   `nixpkgs.lib.getExe` on it to get the entrypoint.
-* **combinators**: (Function returning a list of **Combinators**) - The third
-  argument allows you to control the permissions of the jail. By default, the
-  wrapped program runs with very few permissions and to get it to even work you
-  will need to define what you want it to have access to here. For convenience,
-  this is a function that passes all the available combinators.
+* **combinators**: (List of **Combinators**) - The third argument allows you to
+  control the permissions of the jail. By default, the wrapped program runs
+  with very few permissions and to get it to even work you will need to define
+  what you want it to have access to here. For convenience, if this argument is
+  a function, jail.combinators will be passed in, and the return value will be
+  used.
 
 ## Examples
 
@@ -97,7 +98,7 @@ your Nixos configurations:
         # Now all modules have `jail` passed into them:
         ({ jail, ... }: {
           environment.systemPackages = [
-            (jail "jailed-hello" pkgs.hello (c: []))
+            (jail "jailed-hello" pkgs.hello [])
           ];
         })
       ];
@@ -118,7 +119,7 @@ your Nixos configurations:
         pkgs = import nixpkgs { system = "x86_64-linux"; };
         jail = jail-nix.lib.init pkgs;
       in {
-        my-jailed-package = jail "jailed-hello" pkgs.hello (c: []);
+        my-jailed-package = jail "jailed-hello" pkgs.hello [];
       };
   };
 }
