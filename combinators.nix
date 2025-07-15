@@ -441,6 +441,44 @@
     ;
   };
 
+  readonly-runtime-args = {
+    sig = "Combinator";
+    doc = ''
+      Binds any valid paths passed in as arguments to the jailed program at
+      runtime as read-only.
+    '';
+    __functor = _:
+      include-once "readonly-runtime-args"
+      (add-runtime ''
+        for MAYBE_PATH in "$@"; do
+          if [ -e "$MAYBE_PATH" ]; then
+            P="$(realpath "$MAYBE_PATH")"
+            RUNTIME_ARGS+=(--ro-bind "$P" "$P")
+          fi
+        done
+      '')
+    ;
+  };
+
+  readwrite-runtime-args = {
+    sig = "Combinator";
+    doc = ''
+      Binds any valid paths passed in as arguments to the jailed program at
+      runtime as read-write.
+    '';
+    __functor = _:
+      include-once "readwrite-runtime-args"
+      (add-runtime ''
+        for MAYBE_PATH in "$@"; do
+          if [ -e "$MAYBE_PATH" ]; then
+            P="$(realpath "$MAYBE_PATH")"
+            RUNTIME_ARGS+=(--bind "$P" "$P")
+          fi
+        done
+      '')
+    ;
+  };
+
   mount-cwd = {
     sig = "Combinator";
     doc = ''
