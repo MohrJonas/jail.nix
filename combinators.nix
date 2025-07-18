@@ -479,6 +479,42 @@
     ;
   };
 
+  readonly-paths-from-var = {
+    sig = "String -> String -> Combinator";
+    doc  = ''
+      This binds multiple paths as read-only specified by a single runtime
+      environment variable.
+
+      The first argument to this combinator is the runtime environment variable
+      that contains a list of paths to be bound. The second argument is a
+      deliminator to split the paths (Typically either `" "` or `":"`).
+
+      This is useful for variables like `XDG_DATA_DIRS`, `GTK_PATH`,
+      `XCURSOR_PATH`, etc.
+
+      Example:
+      ```nix
+      compose [
+        (readonly-paths-from-var "XDG_DATA_DIRS" ":")
+        (readonly-paths-from-var "XCURSOR_PATH" " ")
+      ]
+      ```
+    '';
+    __functor = _:
+      var: separator:
+        assert pkgs.lib.isValidPosixName var;
+        include-once "readonly-paths-from-var-${var}"
+        (add-runtime ''
+          while read -rd${lib.escapeShellArg separator} DIR; do
+            if [ -e "$DIR" ]; then
+              P="$(realpath "$DIR")"
+              RUNTIME_ARGS+=(--ro-bind "$P" "$P")
+            fi
+          done <<< "${"$"}${var}"
+        '')
+    ;
+  };
+
   mount-cwd = {
     sig = "Combinator";
     doc = ''
@@ -504,15 +540,17 @@
         pulse
         pipewire
         wayland
-        (fwd-env "XDG_RUNTIME_DIR")
         (readonly (noescape "/etc/fonts"))
         (readonly (noescape "~/.config/dconf"))
+        (fwd-env "XDG_RUNTIME_DIR")
+        (fwd-env "XDG_DATA_DIRS")
+        (readonly-paths-from-var "XDG_DATA_DIRS" ":")
 
         # Cursor
         (fwd-env "XCURSOR_THEME")
         (fwd-env "XCURSOR_PATH")
         (fwd-env "XCURSOR_SIZE")
-        (readonly (noescape "/etc/profiles/per-user/\"$USER\"/share/icons")) # TODO - this is from XCURSOR_PATH, maybe readonly these paths?
+        (readonly-paths-from-var "XCURSOR_PATH" " ")
       ]
     ;
   };

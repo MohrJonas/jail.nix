@@ -58,6 +58,36 @@ in {
     )
   ];
 
+  "combinators/readonly-from-path-var" = let
+    separator = " ";
+    mkTestPath = path: "mkdir -p /build/${path} && touch /build/${path}/file";
+  in [
+    (mkTestPath "some/path")
+    (mkTestPath "some/other/path")
+    (mkTestPath "some/not/in/var")
+    "export TEST_PATHS=${lib.escapeShellArg (lib.concatStringsSep separator [
+      "some/path"
+      "some/non/existant/path"
+      "some/other/path"
+      "some/other/non/existant/path"
+    ])}"
+    (assertStdout
+      (jail "test" (sh "${lib.getExe pkgs.tree} /build/some") (c: [
+        (c.readonly-paths-from-var "TEST_PATHS" separator)
+      ]))
+      (lib.trim ''
+        /build/some
+        |-- other
+        |   `-- path
+        |       `-- file
+        `-- path
+            `-- file
+
+        4 directories, 2 files
+      '')
+    )
+  ];
+
   "combinators/set-argv" = assertStdout
     (jail "test" (sh "printf '1=%s,2=%s,3=%s' \"$@\"") (c: [
       (c.set-argv [ "foo" "bar baz" "foo>'bar'" ])
