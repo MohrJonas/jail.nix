@@ -55,9 +55,10 @@ in {
 
       (add-runtime ''
         if [ ! -e ${helpers.dataDirSubPath "passwd"} ] || [ ! -e ${helpers.dataDirSubPath "group"} ]; then
+          NOLOGIN=${pkgs.shadow}/bin/nologin
           mkdir -p ${helpers.dataDir}
-          echo "root:x:0:0:System administrator:/root:$(which nologin)" > ${helpers.dataDirSubPath "passwd"}
-          echo "$(id -un):x:$(id -u):$(id -g)::$HOME:$(which nologin)" >> ${helpers.dataDirSubPath "passwd"}
+          echo "root:x:0:0:System administrator:/root:$NOLOGIN" > ${helpers.dataDirSubPath "passwd"}
+          echo "$(id -un):x:$(id -u):$(id -g)::$HOME:$NOLOGIN" >> ${helpers.dataDirSubPath "passwd"}
           echo "root:x:0:" > ${helpers.dataDirSubPath "group"}
           echo "$(id -gn):x:$(id -g):" >> ${helpers.dataDirSubPath "group"}
         fi
