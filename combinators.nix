@@ -537,6 +537,7 @@
     '';
     __functor = _:
       compose [
+        (add-runtime "mkdir -p ~/.config/dconf")
         pulse
         pipewire
         wayland
