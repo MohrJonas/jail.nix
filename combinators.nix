@@ -547,9 +547,9 @@
         (readonly-paths-from-var "XDG_DATA_DIRS" ":")
 
         # Cursor
-        (fwd-env "XCURSOR_THEME")
-        (fwd-env "XCURSOR_PATH")
-        (fwd-env "XCURSOR_SIZE")
+        (try-fwd-env "XCURSOR_THEME")
+        (try-fwd-env "XCURSOR_PATH")
+        (try-fwd-env "XCURSOR_SIZE")
         (readonly-paths-from-var "XCURSOR_PATH" " ")
       ]
     ;
