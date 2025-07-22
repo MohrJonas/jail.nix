@@ -510,7 +510,7 @@
               P="$(realpath "$DIR")"
               RUNTIME_ARGS+=(--ro-bind "$P" "$P")
             fi
-          done <<< "${"$"}${var}"
+          done <<< "''${${var}-}"
         '')
     ;
   };

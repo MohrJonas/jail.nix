@@ -88,6 +88,11 @@ in {
     )
   ];
 
+  "combinators/readonly-from-path-var doesn't require the var to be set" =
+    jail "test" (sh "true") (c: [
+      (c.readonly-paths-from-var "THIS_VAR_IS_NOT_SET" ":")
+    ]);
+
   "combinators/set-argv" = assertStdout
     (jail "test" (sh "printf '1=%s,2=%s,3=%s' \"$@\"") (c: [
       (c.set-argv [ "foo" "bar baz" "foo>'bar'" ])
