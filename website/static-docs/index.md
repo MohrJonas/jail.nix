@@ -16,6 +16,8 @@ configuration:
 }
 ```
 
+---
+
 ## Initializing
 
 The core functionality of jail.nix is a `jail` function that wraps derivations
@@ -37,28 +39,22 @@ jail = jail-nix.lib.init pkgs;
 
 You can set more options in the initialization with `jail-nix.lib.extend`.
 
-You must pass in an instantiated nixpkgs attribute `pkgs`.
+This takes in a single attribute set as an argument. The only required key is
+`pkgs` which must be an instantiated nixpkgs.
 
-For example, the below snippet creates a `jail` function where `my-combinator`
-is passed to jail definitions.
-
+Example:
 ```nix
 pkgs = import nixpkgs { system = "x86_64-linux"; };
-
 jail = jail-nix.lib.extend {
   inherit pkgs;
-  additionalCombinators = baseCombinators: with baseCombinators; [
-    my-combinator = compose [
-      (readonly "/foo")
-      (readonly "/bar")
-    ];
-  ];
-};
 
-jailed-hello = jail "jailed-hello" pkgs.hello (c: with c; [
-  my-combinator
-]);
+  # Other configuration options here...
+};
 ```
+
+For a full list of options see [Advanced Configuration](advanced-configuration).
+
+---
 
 ## Usage
 
@@ -76,6 +72,8 @@ following positional arguments:
   what you want it to have access to here. For convenience, if this argument is
   a function, jail.combinators will be passed in, and the return value will be
   used.
+
+---
 
 ## Examples
 

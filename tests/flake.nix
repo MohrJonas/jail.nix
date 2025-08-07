@@ -5,7 +5,7 @@
   outputs = { nixpkgs, ... }: let
     pkgs = import nixpkgs { system = "x86_64-linux"; };
     lib = pkgs.lib;
-    jail = import ../lib.nix { inherit pkgs; };
+    jail-nix.lib.extend = import ../lib.nix;
 
     ansi = clrCode: "[${toString clrCode}m";
     green = ansi 32;
@@ -36,7 +36,7 @@
       if lib.isDerivation testBody then lib.getExe testBody else
       throw "Unknown test body type ${type}";
 
-    testCases = import ./test-cases.nix { inherit pkgs lib test jail; };
+    testCases = import ./test-cases.nix { inherit pkgs lib test jail-nix; };
   in {
     apps.x86_64-linux.runChecks = {
       type = "app";

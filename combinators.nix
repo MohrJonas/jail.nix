@@ -1,4 +1,7 @@
-{ pkgs, lib, helpers }: rec {
+pkgs: let
+  inherit (pkgs) lib;
+  helpers = import ./helpers.nix pkgs;
+in rec {
   noescape = {
     sig = "String -> NoEscapedString";
     doc = ''
@@ -25,9 +28,7 @@
       (readonly (noescape "\"$FOO\""))
       ```
     '';
-    __functor = _:
-      value: { _noescape = value; }
-    ;
+    __functor = _: helpers.noescape;
   };
 
   escape = {
@@ -52,12 +53,7 @@
       }
       ```
     '';
-    __functor = _:
-      rawOrStr:
-        if builtins.typeOf rawOrStr == "set" && rawOrStr ? _noescape
-        then rawOrStr._noescape
-        else lib.strings.escapeShellArg rawOrStr
-    ;
+    __functor = _: helpers.escape;
   };
 
   compose = {

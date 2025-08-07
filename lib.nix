@@ -1,21 +1,24 @@
 { pkgs
 , additionalCombinators ? _: {}
+, basePermissions ? import ./base-permissions.nix pkgs
 }: let
   inherit (pkgs) lib;
 
-  helpers = rec {
-    dataDir = "~/.local/share/jail.nix";
-    dataDirSubPath = subPath: "${dataDir}/${builtinCombinators.escape subPath}";
-  };
-
-  builtinCombinators = import ./combinators.nix { inherit pkgs lib helpers; };
+  builtinCombinators = import ./combinators.nix pkgs;
 
   allCombinators = builtinCombinators // additionalCombinators builtinCombinators;
+
+  normalizePermissionsToList = combinators:
+    let t = builtins.typeOf combinators; in
+      if t == "lambda" then combinators allCombinators else
+      if t == "list" then combinators else
+      if t == "null" then []
+      else throw "Unknown combinator type ${t}. Must be a function, list, or null";
 
 in {
   combinators = allCombinators;
 
-  __functor = _: name: exe: combinatorsToApply: let
+  __functor = _: name: exe: permissions: let
     initialState = {
       name = name;
       cmd = "${lib.getExe pkgs.bubblewrap}";
@@ -30,47 +33,14 @@ in {
       included-once = []; # See include-once combinator
       cleanup = []; # See cleanup combinator
     };
-
-    userCombinators =
-      let t = builtins.typeOf combinatorsToApply; in
-        if t == "lambda" then combinatorsToApply allCombinators else
-        if t == "list" then combinatorsToApply else
-        if t == "null" then []
-        else throw "Unknown combinator type ${t}. Must be a function, list, or null";
-
   in lib.pipe initialState (
-    # apply pre-user combinators
-    (with builtinCombinators; [
-      (unsafe-add-raw-args "--proc /proc")
-      (unsafe-add-raw-args "--dev /dev")
-      (unsafe-add-raw-args "--tmpfs /tmp")
-      (unsafe-add-raw-args "--tmpfs ~")
-      (unsafe-add-raw-args "--clearenv")
-      (unsafe-add-raw-args "--die-with-parent")
-      (readonly "/nix/store")
-      (readonly "/bin/sh")
-      (fwd-env "LANG")
-      (fwd-env "HOME")
-      (fwd-env "TERM")
+    # Permissions shared by all invocations of jail
+    (normalizePermissionsToList basePermissions)
 
-      (add-runtime ''
-        if [ ! -e ${helpers.dataDirSubPath "passwd"} ] || [ ! -e ${helpers.dataDirSubPath "group"} ]; then
-          NOLOGIN=${pkgs.shadow}/bin/nologin
-          mkdir -p ${helpers.dataDir}
-          echo "root:x:0:0:System administrator:/root:$NOLOGIN" > ${helpers.dataDirSubPath "passwd"}
-          echo "$(id -un):x:$(id -u):$(id -g)::$HOME:$NOLOGIN" >> ${helpers.dataDirSubPath "passwd"}
-          echo "root:x:0:" > ${helpers.dataDirSubPath "group"}
-          echo "$(id -gn):x:$(id -g):" >> ${helpers.dataDirSubPath "group"}
-        fi
-      '')
-      (ro-bind (noescape (helpers.dataDirSubPath "passwd")) "/etc/passwd")
-      (ro-bind (noescape (helpers.dataDirSubPath "group")) "/etc/group")
-    ])
+    # Permissions for this specific jail
+    ++ (normalizePermissionsToList permissions)
 
-    # apply user combinators
-    ++ userCombinators
-
-    # apply post-user combinators
+    # Finalize everything remaining in state into bwrap args
     ++ (with builtinCombinators; [
       (s:
         # See `--unshare-*` in BWRAP(1)
@@ -89,7 +59,7 @@ in {
       ) s (builtins.attrNames s.env))
     ])
 
-    # build jailed app from state
+    # Build jailed app from state
     ++ [
       (state: ''
         RUNTIME_ARGS=()

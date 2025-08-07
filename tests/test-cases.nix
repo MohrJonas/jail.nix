@@ -1,10 +1,24 @@
-{ pkgs, lib, test, jail }: with test; let
+{ pkgs, lib, test, jail-nix }: with test; let
   sh = script: (pkgs.writeShellApplication { name = "test-script"; text = script; });
   defaultPath = "${pkgs.coreutils}/bin";
+  jail = jail-nix.lib.extend { inherit pkgs; };
 in {
   "simple jail works" = assertStdout
     (jail "hello" pkgs.hello [])
     "Hello, world!";
+
+  "it allows overriding base permissions shared across all jails" = let
+    jail' = jail-nix.lib.extend {
+      inherit pkgs;
+      basePermissions = c: [
+        (c.readonly "/build/secret")
+        (c.readonly "/nix/store")
+      ];
+    };
+   in [
+     "echo hunter2 > /build/secret"
+     (assertStdout (jail' "hello" (sh "cat /build/secret") []) "hunter2")
+   ];
 
   "it sets a sane default path" = assertStdout
     (jail "test" (sh ''echo "$PATH"'') [])
