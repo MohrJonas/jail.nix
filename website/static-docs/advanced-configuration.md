@@ -8,30 +8,30 @@ All configuration options on this page can be passed into `jail-nix.lib.extend`.
 `jail.combinators` and in jail definitions. If passed a funciton, jail.nix will
 inject the builtin combinators.
 
-For example, this creates a `jail` function that exposes a `my-combinator`
+For example, this creates a `jail` function that exposes a `my-permission`
 combinator:
 
 ```nix
 jail = jail-nix.lib.extend {
   inherit pkgs;
   additionalCombinators = builtinCombinators: with builtinCombinators; [
-    my-combinator = compose [
+    my-permission = compose [
       (readonly "/foo")
       (readonly "/bar")
     ];
   ];
 };
 
-# Now my-combinator is exposed in all the places the builtin combinators are exposed:
+# Now my-permission is exposed in all the places the builtin combinators are exposed:
 
 jailed-hello = jail "jailed-hello" pkgs.hello (c: with c; [
-  my-combinator
+  my-permission
 ]);
 
 # Alternatively, using jail.combinators:
 
 jailed-hello = jail "jailed-hello" pkgs.hello [
-  jail.combinators.my-combinator
+  jail.combinators.my-permission
 ];
 ```
 

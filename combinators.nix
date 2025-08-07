@@ -7,9 +7,9 @@ in rec {
     doc = ''
       Prevent the passed string from being automatically shell escaped.
 
-      `escape` and `noescape` aren't combinators, but they are useful helpers
-      to expose when defining jails and writing custom combinators, so they are
-      exposed with the rest of the combinators for convenience.
+      `escape` and `noescape` don't return `Permission`s, but they are useful
+      helpers to expose when defining jails and writing custom combinators, so
+      they are exposed with the rest of the combinators for convenience.
 
       It is the caller's responsibility to ensure anything passed to this is
       correctly escaped.
@@ -38,9 +38,9 @@ in rec {
 
       Use [noescape](#noescape) to prevent escaping.
 
-      `escape` and `noescape` aren't combinators, but they are useful helpers
-      to expose when defining jails and writing custom combinators, so they are
-      exposed with the rest of the combinators for convenience.
+      `escape` and `noescape` don't return `Permission`s, but they are useful
+      helpers to expose when defining jails and writing custom combinators, so
+      they are exposed with the rest of the combinators for convenience.
 
       Example:
       ```nix
@@ -57,7 +57,7 @@ in rec {
   };
 
   compose = {
-    sig = "[Combinator] -> Combinator";
+    sig = "[Permission] -> Permission";
     doc = ''
       Allows combinator composition.
 
@@ -85,9 +85,9 @@ in rec {
   };
 
   include-once = {
-    sig = "String -> Combinator -> Combinator";
+    sig = "String -> Permission -> Permission";
     doc = ''
-      Only run the passed combinator if include-once hasn't been previously
+      Only run the passed permission if include-once hasn't been previously
       called with the specified key.
 
       This is useful when writing your own combinators.
@@ -129,7 +129,7 @@ in rec {
   };
 
   unsafe-add-raw-args = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Adds the raw string passed into it into the call to bubblewrap.
 
@@ -142,7 +142,7 @@ in rec {
   };
 
   add-path = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Appends the passed string to `$PATH`.
     '';
@@ -152,7 +152,7 @@ in rec {
   };
 
    set-argv = {
-    sig = "[String] -> Combinator";
+    sig = "[String] -> Permission";
     doc = ''
       Overrides the current argv that is passed to the jailed executable.
 
@@ -166,7 +166,7 @@ in rec {
   };
 
   add-runtime = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Adds arbitrary logic to run at runtime, before the jail starts.
 
@@ -197,7 +197,7 @@ in rec {
   };
 
   add-cleanup = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Adds arbitrary logic to run when the jail exits.
 
@@ -231,7 +231,7 @@ in rec {
   };
 
   wrap-entry = {
-    sig = "(String -> String) -> Combinator";
+    sig = "(String -> String) -> Permission";
     doc = ''
       Wraps the binary to be jailed in a bash script that will be the new
       entrypoint to the jail.
@@ -260,7 +260,7 @@ in rec {
   };
 
   add-pkg-deps = {
-    sig = "[Package] -> Combinator";
+    sig = "[Package] -> Permission";
     doc = ''
       Adds the packages' `bin` directory to `$PATH`.
     '';
@@ -270,7 +270,7 @@ in rec {
   };
 
   no-new-session = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Disables `--new-session`
 
@@ -286,7 +286,7 @@ in rec {
   };
 
   set-env = {
-    sig = "String -> String -> Combinator";
+    sig = "String -> String -> Permission";
     doc = ''
       Sets the specified environment variable in the jail.
 
@@ -298,7 +298,7 @@ in rec {
   };
 
   share-ns = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Removes the call to `--unshare-` for the provided namespace.
 
@@ -314,7 +314,7 @@ in rec {
   };
 
   set-hostname = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Sets the hostname to use for the `network` combinator.
 
@@ -334,7 +334,7 @@ in rec {
   };
 
   tmpfs = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Mounts a new tmpfs at the specified location.
     '';
@@ -344,7 +344,7 @@ in rec {
   };
 
   camera = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Allows access to webcams and other V4L2 video devices at `/dev/video*`.
     '';
@@ -360,7 +360,7 @@ in rec {
   };
 
   fwd-env = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Forwards the specified environment variable to the underlying process.
 
@@ -376,7 +376,7 @@ in rec {
   };
 
   try-fwd-env = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Forwards the specified environment variable to the underlying process (if set).
     '';
@@ -386,7 +386,7 @@ in rec {
   };
 
   readonly = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Binds the specified path in the jail as read-only.
     '';
@@ -396,7 +396,7 @@ in rec {
   };
 
   readwrite = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Binds the specified path in the jail as read-write.
     '';
@@ -406,7 +406,7 @@ in rec {
   };
 
   ro-bind = {
-    sig = "String -> String -> Combinator";
+    sig = "String -> String -> Permission";
     doc = ''
       Binds the specified path on the host to a path in the jail as read-only.
 
@@ -422,7 +422,7 @@ in rec {
   };
 
   rw-bind = {
-    sig = "String -> String -> Combinator";
+    sig = "String -> String -> Permission";
     doc = ''
       Binds the specified path on the host to a path in the jail as read-write.
 
@@ -438,7 +438,7 @@ in rec {
   };
 
   readonly-runtime-args = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Binds any valid paths passed in as arguments to the jailed program at
       runtime as read-only.
@@ -457,7 +457,7 @@ in rec {
   };
 
   readwrite-runtime-args = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Binds any valid paths passed in as arguments to the jailed program at
       runtime as read-write.
@@ -476,7 +476,7 @@ in rec {
   };
 
   readonly-paths-from-var = {
-    sig = "String -> String -> Combinator";
+    sig = "String -> String -> Permission";
     doc  = ''
       This binds multiple paths as read-only specified by a single runtime
       environment variable.
@@ -512,7 +512,7 @@ in rec {
   };
 
   mount-cwd = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Bind mounts the runtime working directory as read-write.
     '';
@@ -523,7 +523,7 @@ in rec {
   };
 
   gui = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Exposes everything required to get graphical applications to work.
 
@@ -553,7 +553,7 @@ in rec {
   };
 
   wayland = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Exposes your wayland compositor to the jail.
     '';
@@ -568,7 +568,7 @@ in rec {
   };
 
   xwayland = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Safely allow X11 apps to render to a wayland compositor.
 
@@ -598,7 +598,7 @@ in rec {
   };
 
   unsafe-x11 = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Exposes X11 to the jailed application.
 
@@ -617,7 +617,7 @@ in rec {
   };
 
   pulse = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Exposes pulseaudio to the jailed application.
     '';
@@ -633,7 +633,7 @@ in rec {
   };
 
   pipewire = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Exposes pipewire to the jailed application.
     '';
@@ -648,7 +648,7 @@ in rec {
   };
 
   gpu = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Exposes the gpu to jailed application.
     '';
@@ -664,7 +664,7 @@ in rec {
   };
 
   time-zone = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Exposes your timezone.
     '';
@@ -679,7 +679,7 @@ in rec {
   };
 
   network = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Grants network access to the jail.
 
@@ -706,7 +706,7 @@ in rec {
   };
 
   unsafe-dbus = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Exposes D-Bus to the jailed program.
 
@@ -724,7 +724,7 @@ in rec {
   };
 
   bind-pkg = {
-    sig = "String -> Package -> Combinator";
+    sig = "String -> Package -> Permission";
     doc = ''
       Bind mounts the passed derivation at a specified location.
 
@@ -739,7 +739,7 @@ in rec {
   };
 
   write-text = {
-    sig = "String -> String -> Combinator";
+    sig = "String -> String -> Permission";
     doc = ''
       Bind mounts a read-only text file at a path.
 
@@ -758,7 +758,7 @@ in rec {
   };
 
   persist-home = {
-    sig = "String -> Combinator";
+    sig = "String -> Permission";
     doc = ''
       Persists the home directory across all jails with the specified name.
 

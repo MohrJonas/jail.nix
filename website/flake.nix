@@ -45,6 +45,15 @@
         (docs: ''
           # Combinators
 
+          jail.nix combinators are the building blocks to create `Permission`s,
+          which grant a program specific permissions at runtime.
+
+          These permissions can be passed into the third argument to `jail`
+          funciton, as well as
+          [`basePermissions`](../advanced-configuration/#basepermissions).
+
+          ---
+
           ${docs}
         '')
       ];

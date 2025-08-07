@@ -66,7 +66,7 @@ following positional arguments:
   be a derivation like `pkgs.hello`, or a string like
   `"${pkgs.hello}/bin/hello"`. If a derivation is passed it will call
   `nixpkgs.lib.getExe` on it to get the entrypoint.
-* **combinators**: (List of **Combinators**) - The third argument allows you to
+* **permissions**: (List of **Permissions**) - The third argument allows you to
   control the permissions of the jail. By default, the wrapped program runs
   with very few permissions and to get it to even work you will need to define
   what you want it to have access to here. For convenience, if this argument is
