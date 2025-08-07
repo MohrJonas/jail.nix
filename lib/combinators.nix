@@ -122,9 +122,9 @@ in rec {
     '';
     __functor = _:
       key: combinator: state:
-        if lib.elem key state.included-once
+        if lib.elem key state.includedOnce
         then state
-        else combinator (state // { included-once = state.included-once ++ [ key ]; })
+        else combinator (state // { includedOnce = state.includedOnce ++ [ key ]; })
     ;
   };
 
@@ -281,7 +281,7 @@ in rec {
       See BWRAP(1) for more information and security implications.
     '';
     __functor = _:
-      state: state // { new-session = false; }
+      state: state // { newSession = false; }
     ;
   };
 

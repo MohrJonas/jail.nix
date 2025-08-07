@@ -27,11 +27,11 @@ in {
       path = [];
       argv = "\"$@\"";
       runtime = "";
-      new-session = true;
+      newSession = true;
       hostname = "jail";
       env = {};
       namespaces = {};
-      included-once = []; # See include-once combinator
+      includedOnce = []; # See include-once combinator
       cleanup = []; # See cleanup combinator
     };
   in lib.pipe initialState (
@@ -53,7 +53,7 @@ in {
         ] s
       )
       (s: if builtins.length s.path > 0 then set-env "PATH" (lib.concatStringsSep ":" s.path) s else s)
-      (s: if s.new-session then unsafe-add-raw-args "--new-session" s else s)
+      (s: if s.newSession then unsafe-add-raw-args "--new-session" s else s)
       (s: lib.foldr (envVar:
         assert pkgs.lib.isValidPosixName envVar;
         unsafe-add-raw-args "--setenv ${envVar} ${s.env.${envVar}}"
