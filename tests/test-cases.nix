@@ -21,6 +21,23 @@ in {
      (assertStdout (jail' "hello" (sh "cat /build/secret") []) "hunter2")
    ];
 
+  "it allows overriding the bubblewrap package" = let
+    jail' = jail-nix.lib.extend {
+      inherit pkgs;
+      bubblewrapPackage = pkgs.writeShellApplication {
+        name = "my-bubblewrap";
+        text = ''
+          # A version of bwrap that just prints its arguments instead of
+          # actually running a jail.
+          echo "$@"
+        '';
+      };
+      basePermissions = null;
+    };
+  in assertStdout
+    (jail' "test" "some-entrypoint" [])
+    "--unshare-user --unshare-ipc --unshare-pid --unshare-net --unshare-uts --unshare-cgroup --new-session -- some-entrypoint";
+
   "it sets a sane default path" = assertStdout
     (jail "test" (sh ''echo "$PATH"'') [])
     defaultPath;

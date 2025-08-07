@@ -1,6 +1,7 @@
 { pkgs
 , additionalCombinators ? _: {}
 , basePermissions ? import ./base-permissions.nix pkgs
+, bubblewrapPackage ? pkgs.bubblewrap
 }: let
   inherit (pkgs) lib;
 
@@ -21,7 +22,7 @@ in {
   __functor = _: name: exe: permissions: let
     initialState = {
       name = name;
-      cmd = "${lib.getExe pkgs.bubblewrap}";
+      cmd = lib.getExe bubblewrapPackage;
       entry = if builtins.typeOf exe == "string" then lib.escapeShellArg exe else lib.getExe exe;
       path = [];
       argv = "\"$@\"";

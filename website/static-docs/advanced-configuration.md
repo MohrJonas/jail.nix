@@ -62,3 +62,8 @@ jail = jail-nix.lib.extend {
   ];
 };
 ```
+
+## bubblewrapPackage
+
+This configuration option allows you to override what bubblewrap package
+jail.nix uses for its jails. The default value is `pkgs.bubblewrap`.
