@@ -38,7 +38,7 @@
         helpers = throw "Docs must not depend on helpers";
       }
       [
-        (import ../combinators.nix)
+        (import ../lib/combinators.nix)
         (lib.filterAttrs (_: v: !(v ? deprecated && v.deprecated)))
         (lib.mapAttrsToList formatCombinatorDoc)
         (lib.concatStringsSep "\n\n")

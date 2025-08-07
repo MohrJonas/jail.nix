@@ -5,7 +5,7 @@
   outputs = { nixpkgs, ... }: let
     pkgs = import nixpkgs { system = "x86_64-linux"; };
     lib = pkgs.lib;
-    jail-nix.lib.extend = import ../lib.nix;
+    jail-nix.lib = import ../lib;
 
     ansi = clrCode: "[${toString clrCode}m";
     green = ansi 32;
