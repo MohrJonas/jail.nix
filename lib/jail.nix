@@ -23,7 +23,7 @@ in {
       name = name;
       cmd = "${lib.getExe pkgs.bubblewrap}";
       entry = if builtins.typeOf exe == "string" then lib.escapeShellArg exe else lib.getExe exe;
-      path = "${pkgs.coreutils}/bin";
+      path = [];
       argv = "\"$@\"";
       runtime = "";
       new-session = true;
@@ -51,7 +51,7 @@ in {
           unsafe-add-raw-args
         ] s
       )
-      (s: set-env "PATH" s.path s)
+      (s: if builtins.length s.path > 0 then set-env "PATH" (lib.concatStringsSep ":" s.path) s else s)
       (s: if s.new-session then unsafe-add-raw-args "--new-session" s else s)
       (s: lib.foldr (envVar:
         assert pkgs.lib.isValidPosixName envVar;

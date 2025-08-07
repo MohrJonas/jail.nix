@@ -12,6 +12,7 @@ in {
       inherit pkgs;
       basePermissions = c: [
         (c.readonly "/build/secret")
+        (c.add-pkg-deps [ pkgs.coreutils ])
         (c.readonly "/nix/store")
       ];
     };
@@ -48,13 +49,13 @@ in {
     (jail "test" (sh ''echo "$PATH"'') (c: [
       (c.add-path "/some/new/path")
     ]))
-    "${defaultPath}:/some/new/path";
+    "/some/new/path:${defaultPath}";
 
   "combinators/add-pkg-deps" = assertStdout
     (jail "test" (sh ''echo "$PATH"'') (c: [
       (c.add-pkg-deps [ pkgs.hello ])
     ]))
-    "${defaultPath}:${pkgs.hello}/bin";
+    "${pkgs.hello}/bin:${defaultPath}";
 
   "combinators/bind-pkg" = assertStdout
     (jail "test" (sh "cat /foo") (c: [

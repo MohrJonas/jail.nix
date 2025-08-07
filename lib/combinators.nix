@@ -147,7 +147,7 @@ in rec {
       Appends the passed string to `$PATH`.
     '';
     __functor = _:
-      path: state: state // { path = "${state.path}:${path}"; }
+      path: state: state // { path = [ path ] ++ state.path; }
     ;
   };
 
