@@ -1,0 +1,6 @@
+image: nixos/25.05
+environment:
+  NIX_CONFIG: "experimental-features = nix-command flakes"
+tasks:
+  - test-jail-nix: "cd jail.nix/tests && nix run .#runChecks"
+  - build-website: "cd jail.nix/website && nix build -L .#default"
