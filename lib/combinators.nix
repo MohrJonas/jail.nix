@@ -780,6 +780,8 @@ in rec {
   # deprecated
   persisthome = {
     deprecated = true;
+    sig = "Permission";
+    doc = "This was reworked to store data under `~/.local/share/jail.nix` and renamed to [persist-home](#persist-home).";
     __functor = _:
       name:
         lib.warn "persisthome is deprecated, use persist-home instead. When doing so, rename ~/.local/share/jails/${name} to ${helpers.dataDirSubPath "home/${name}"}"
@@ -792,6 +794,8 @@ in rec {
 
   dbus-unsafe = {
     deprecated = true;
+    sig = "Permission";
+    doc = "This was renamed to [unsafe-dbus](#unsafe-dbus).";
     __functor = _:
       lib.warn "dbus-unsafe is deprecated, use unsafe-dbus instead"
       unsafe-dbus;

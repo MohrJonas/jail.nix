@@ -21,42 +21,50 @@
       attrPos = builtins.unsafeGetAttrPos "__functor" combinatorObj;
       file = lib.removePrefix (toString ./..) attrPos.file;
     in ''
-      ## ${name}
+      ### ${name}
       **${name} :: ${combinatorObj.sig}**
 
       [Source](${repo.urls.file file attrPos.line})
 
       ${combinatorObj.doc}
-
-      ---
     '';
 
-    combinatorDocs = lib.pipe
-      {
+    combinatorDocs = let
+      allCombinators = import ../lib/combinators.nix {
         pkgs = throw "Docs must not depend on pkgs";
         lib = throw "Docs must not depend on lib";
         helpers = throw "Docs must not depend on helpers";
-      }
-      [
-        (import ../lib/combinators.nix)
-        (lib.filterAttrs (_: v: !(v ? deprecated && v.deprecated)))
-        (lib.mapAttrsToList formatCombinatorDoc)
-        (lib.concatStringsSep "\n\n")
-        (docs: ''
-          # Combinators
+      };
 
-          jail.nix combinators are the building blocks to create `Permission`s,
-          which grant a program specific permissions at runtime.
+      formatSection = filter:
+        lib.pipe allCombinators [
+          (lib.filterAttrs (_: filter))
+          (lib.mapAttrsToList formatCombinatorDoc)
+          (lib.concatStringsSep "\n\n---\n")
+        ];
 
-          These permissions can be passed into the third argument to `jail`
-          funciton, as well as
-          [`basePermissions`](../advanced-configuration/#basepermissions).
+      hr = ''<hr style="border: 2px solid #272525">'';
+    in ''
+      # Combinators
 
-          ---
+      jail.nix combinators are the building blocks to create `Permission`s,
+      which grant a program specific permissions at runtime.
 
-          ${docs}
-        '')
-      ];
+      These permissions can be passed into the third argument to `jail`
+      funciton, as well as
+      [`basePermissions`](../advanced-configuration/#basepermissions).
+
+      ${formatSection (v: !(v ? deprecated))}
+
+      ${hr}
+
+      ## Deprecated Combinators
+
+      The following combinators have been deprecated, and may be removed in the
+      future.
+
+      ${formatSection (v: v ? deprecated)}
+    '';
 
     mkdocsSettings = {
       site_name = "jail-nix";
