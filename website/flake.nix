@@ -54,7 +54,17 @@
       funciton, as well as
       [`basePermissions`](../advanced-configuration/#basepermissions).
 
-      ${formatSection (v: !(v ? deprecated))}
+      ${formatSection (v: !(v ? deprecated || v ? includedInBasePermissions))}
+
+      ${hr}
+
+      ## Default Included Combinators
+
+      The following combinators are enabled by default, and do not need to be
+      explicitly added to your jails unless you [override
+      `basePermissions`](../advanced-configuration/#basepermissions).
+
+      ${formatSection (v: v ? includedInBasePermissions)}
 
       ${hr}
 

@@ -43,6 +43,9 @@ inherit by default. This configuration option allows you to override these.
 The goal of the base permissions are to provide a reasonably secure default
 with enough permissions to have most software behave correctly.
 
+If you override this, you may want to take a look at the [default included
+combinators](../combinators/#default-included-combinators).
+
 Example:
 ```nix
 jail = jail-nix.lib.extend {
