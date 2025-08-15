@@ -1,5 +1,7 @@
 # jail.nix
 
+[![builds.sr.ht status](https://builds.sr.ht/~alexdavid/jail.nix/commits/main.svg)](https://builds.sr.ht/~alexdavid/jail.nix/commits/main?)
+
 A helper to make it easy and ergonomic to wrap your derivations in
 [bubblewrap](https://github.com/containers/bubblewrap).
 
