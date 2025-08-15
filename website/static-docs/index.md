@@ -2,8 +2,9 @@
 
 ## Installation
 
-It is currently recommended to install jail.nix as a flake input to your
-configuration:
+### Flakes
+
+To install jail.nix using flakes, add jail.nix to your flake inputs:
 
 ```nix
 # flake.nix
@@ -14,6 +15,21 @@ configuration:
     # ...
   };
 }
+```
+
+### callPackage
+
+To install jail.nix using a different dependency manager like
+[niv](https://github.com/nmattia/niv), you can use `pkgs.callPackage`:
+
+```nix
+let
+  sources = import ./nix/sources.nix;
+  pkgs = import sources.nixpkgs {};
+  jail-nix = pkgs.callPackage sources."jail.nix" {};
+  jail = jail-nix.init pkgs;
+in
+  # ...
 ```
 
 ---

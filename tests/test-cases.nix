@@ -7,6 +7,11 @@ in {
     (jail "hello" pkgs.hello [])
     "Hello, world!";
 
+  "can be imported using callPackage" = let
+    jail-nix-without-flake = pkgs.callPackage ../. {};
+    jail-without-flake = jail-nix-without-flake.init pkgs;
+  in assertStdout (jail-without-flake "hello" pkgs.hello []) "Hello, world!";
+
   "it allows overriding base permissions shared across all jails" = let
     jail' = jail-nix.lib.extend {
       inherit pkgs;
