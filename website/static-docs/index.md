@@ -68,7 +68,7 @@ jail = jail-nix.lib.extend {
 };
 ```
 
-For a full list of options see [Advanced Configuration](advanced-configuration).
+For a full list of options see [Advanced Configuration](advanced-configuration.md).
 
 ---
 

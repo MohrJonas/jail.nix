@@ -52,7 +52,7 @@
 
       These permissions can be passed into the third argument to `jail`
       funciton, as well as
-      [`basePermissions`](../advanced-configuration/#basepermissions).
+      [`basePermissions`](advanced-configuration.md#basepermissions).
 
       ${formatSection (v: !(v ? deprecated || v ? includedInBasePermissions))}
 
@@ -62,7 +62,7 @@
 
       The following combinators are enabled by default, and do not need to be
       explicitly added to your jails unless you [override
-      `basePermissions`](../advanced-configuration/#basepermissions).
+      `basePermissions`](advanced-configuration.md#basepermissions).
 
       ${formatSection (v: v ? includedInBasePermissions)}
 
