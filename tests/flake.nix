@@ -51,19 +51,16 @@
           ]})
           TEST_FAIL_LOG=$(mktemp)
           trap 'rm $TEST_FAIL_LOG' EXIT
-          (
-            for TEST_NAME in "''${TESTS[@]}"; do
-              (
-                if TEST_OUTPUT=$(nix build -L .#checks.x86_64-linux."$TEST_NAME" 2>&1); then
-                  printf '  %s [${green}✔${reset}]\n' "$TEST_NAME"
-                else
-                  printf '  %s [${red}✖${reset}]\n' "$TEST_NAME"
-                  printf '${red}✖ %s${reset}\n%s\n\n\n' "$TEST_NAME" "$TEST_OUTPUT" >> "$TEST_FAIL_LOG"
-                fi
-              ) &
-            done
-          ) | sort
-          wait
+          for TEST_NAME in "''${TESTS[@]}"; do
+            (
+              if TEST_OUTPUT=$(nix build -L .#checks.x86_64-linux."$TEST_NAME" 2>&1); then
+                printf '  %s [${green}✔${reset}]\n' "$TEST_NAME"
+              else
+                printf '  %s [${red}✖${reset}]\n' "$TEST_NAME"
+                printf '${red}✖ %s${reset}\n%s\n\n\n' "$TEST_NAME" "$TEST_OUTPUT" >> "$TEST_FAIL_LOG"
+              fi
+            )
+          done
           FAILURES=$(cat "$TEST_FAIL_LOG")
           if [ "$FAILURES" != "" ]; then
             printf '\n${red}Failing tests:${reset}\n\n%s' "$FAILURES"
