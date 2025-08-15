@@ -9,7 +9,7 @@ To install jail.nix using flakes, add jail.nix to your flake inputs:
 ```nix
 # flake.nix
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
   inputs.jail-nix.url = "sourcehut:~alexdavid/jail.nix";
   outputs = { nixpkgs, jail-nix, ... }: {
     # ...
@@ -101,7 +101,7 @@ your Nixos configurations:
 ```nix
 # flake.nix
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
   inputs.jail-nix.url = "sourcehut:~alexdavid/jail.nix";
   outputs = { nixpkgs, jail-nix, ... }: {
     nixosConfigurations.my-nixos-host = nixpkgs.lib.nixosSystem {
@@ -125,7 +125,7 @@ your Nixos configurations:
 ```nix
 # flake.nix
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
   inputs.jail-nix.url = "sourcehut:~alexdavid/jail.nix";
   outputs = { nixpkgs, jail-nix, ... }: {
     packages.x86_64-linux =
