@@ -12,6 +12,51 @@ in {
     jail-without-flake = jail-nix-without-flake.init pkgs;
   in assertStdout (jail-without-flake "hello" pkgs.hello []) "Hello, world!";
 
+  "it only exposes the nix store paths that are part of the runtime closure" = let
+    mkDep = name: let
+      buildtime = pkgs.runCommand "${name}-buildtime" {} "touch $out";
+      runtime = pkgs.runCommand "${name}-runtime" {} "touch $out";
+      parent = pkgs.runCommand "entry-dep" {} ''
+        echo ${buildtime}
+        echo ${runtime} > $out
+      '';
+    in { inherit buildtime runtime parent; };
+    deps = {
+      add-pkg-deps = mkDep "add-pkg-deps";
+      argv = mkDep "argv";
+      entry = mkDep "entry";
+      unrelated = sh "echo this dep is unrelated";
+    };
+    checkExists = jail
+      "check-exists"
+      (sh ''
+        # ${deps.entry.parent}
+        if [ -e "$1" ]; then
+          echo "$1 file exists"
+        else
+          echo "$1 file doesn't exist"
+        fi
+      '')
+      (c: [
+        (c.add-pkg-deps [ deps.add-pkg-deps.parent ])
+        (c.set-argv [ (c.noescape "\"$1\"") deps.argv.parent ])
+      ]);
+  in
+    # Dependencies that should be in the jail
+    map (dep: assertStdout (sh "${lib.getExe checkExists} ${dep}") "${dep} file exists") [
+      deps.add-pkg-deps.runtime
+      deps.argv.runtime
+      deps.entry.runtime
+    ]
+    ++
+    # Dependencies that shouldn't be in the jail
+    map (dep: assertStdout (sh "${lib.getExe checkExists} ${dep}") "${dep} file doesn't exist") [
+      deps.add-pkg-deps.buildtime
+      deps.argv.buildtime
+      deps.entry.buildtime
+      deps.unrelated
+    ];
+
   "it allows overriding base permissions shared across all jails" = let
     jail' = jail-nix.lib.extend {
       inherit pkgs;

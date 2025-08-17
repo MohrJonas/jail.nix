@@ -33,6 +33,7 @@ in {
       namespaces = {};
       includedOnce = []; # See include-once combinator
       cleanup = []; # See cleanup combinator
+      deferredPermissions = []; # See defer combinator
     };
   in lib.pipe initialState (
     # Permissions shared by all invocations of jail
@@ -40,6 +41,9 @@ in {
 
     # Permissions for this specific jail
     ++ (normalizePermissionsToList permissions)
+
+    # Permissions wrapped in `defer` combinator
+    ++ [(s: builtinCombinators.compose s.deferredPermissions s)]
 
     # Finalize everything remaining in state into bwrap args
     ++ (with builtinCombinators; [

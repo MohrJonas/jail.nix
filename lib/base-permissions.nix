@@ -6,10 +6,10 @@ pkgs: let helpers = import ./helpers.nix pkgs; in combinators: with combinators;
   (unsafe-add-raw-args "--clearenv")
   (unsafe-add-raw-args "--die-with-parent")
   (add-pkg-deps [ pkgs.coreutils ])
-  (readonly "/nix/store")
   (readonly "/bin/sh")
   (fwd-env "LANG")
   (fwd-env "HOME")
   (fwd-env "TERM")
+  bind-nix-store-runtime-closure
   fake-passwd
 ]
