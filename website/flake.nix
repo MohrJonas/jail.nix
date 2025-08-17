@@ -54,6 +54,13 @@
       funciton, as well as
       [`basePermissions`](advanced-configuration.md#basepermissions).
 
+      A `Permission` is a `State -> State` function where `State` is an
+      internal type that is used to eventually build the final bubblewrap
+      flags. The type of `State` is not part of the public API, and may change
+      in the future.
+
+      ${hr}
+
       ${formatSection (v: !(v ? deprecated || v ? includedInBasePermissions))}
 
       ${hr}
