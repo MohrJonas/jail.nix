@@ -34,6 +34,7 @@ in {
       includedOnce = []; # See include-once combinator
       cleanup = []; # See cleanup combinator
       deferredPermissions = []; # See defer combinator
+      additionalRuntimeClosures = []; # See bind-nix-store-runtime-closure
     };
   in lib.pipe initialState (
     # Permissions shared by all invocations of jail

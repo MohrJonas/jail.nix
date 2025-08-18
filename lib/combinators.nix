@@ -634,6 +634,7 @@ in rec {
       include-once "bind-nix-store-runtime-closure" (defer (state:
         let
           runtimeClosure = pkgs.writeText "${state.name}-runtime-closure" ''
+            ${pkgs.lib.concatStringsSep "\n" state.additionalRuntimeClosures}
             ${pkgs.lib.concatStringsSep "\n" state.path}
             ${state.argv}
             ${state.entry}
@@ -872,7 +873,10 @@ in rec {
       ```
     '';
     __functor = _:
-      path: pkg: ro-bind (toString pkg) path
+      path: pkg: compose [
+        (ro-bind (toString pkg) path)
+        (state: state // { additionalRuntimeClosures = state.additionalRuntimeClosures ++ [ pkg ]; })
+      ]
     ;
   };
 

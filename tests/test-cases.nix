@@ -26,6 +26,7 @@ in {
       argv = mkDep "argv";
       entry = mkDep "entry";
       unrelated = sh "echo this dep is unrelated";
+      write-text = mkDep "write-text";
     };
     checkExists = jail
       "check-exists"
@@ -40,6 +41,7 @@ in {
       (c: [
         (c.add-pkg-deps [ deps.add-pkg-deps.parent ])
         (c.set-argv [ (c.noescape "\"$1\"") deps.argv.parent ])
+        (c.write-text "/write/text/with/runtime/dep" "${deps.write-text.parent}")
       ]);
   in
     # Dependencies that should be in the jail
@@ -47,6 +49,7 @@ in {
       deps.add-pkg-deps.runtime
       deps.argv.runtime
       deps.entry.runtime
+      deps.write-text.runtime
     ]
     ++
     # Dependencies that shouldn't be in the jail
@@ -55,6 +58,7 @@ in {
       deps.argv.buildtime
       deps.entry.buildtime
       deps.unrelated
+      deps.write-text.buildtime
     ];
 
   "it allows overriding base permissions shared across all jails" = let
