@@ -144,7 +144,7 @@ in rec {
   add-path = {
     sig = "String -> Permission";
     doc = ''
-      Appends the passed string to `$PATH`.
+      Prepends the passed string to `$PATH`.
     '';
     __functor = _:
       path: state: state // { path = [ path ] ++ state.path; }
