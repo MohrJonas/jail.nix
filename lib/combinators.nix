@@ -218,7 +218,7 @@ in rec {
           do-something "$TMP_FILE"
         ${"''"})
         (add-cleanup ${"''"}
-          if [ -e "''${TMP_FILE-}" ]; then
+          if [ -e "${"''"}''${TMP_FILE-}" ]; then
             rm "$TMP_FILE"
           fi
         ${"''"})
