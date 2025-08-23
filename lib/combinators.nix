@@ -1,4 +1,4 @@
-pkgs: let
+pkgs: jail: let
   inherit (pkgs) lib;
   helpers = import ./helpers.nix pkgs;
 in rec {
@@ -902,15 +902,81 @@ in rec {
     ;
   };
 
+  dbus = {
+    sig = "{ own? :: [String], talk? :: [String], see? :: [String], call? :: [String], broadcast? :: [String] } -> Permission";
+    doc = ''
+      Grants access to dbus, using
+      [`xdg-dbus-proxy`](https://github.com/flatpak/xdg-dbus-proxy) (inside a
+      jail itself) to filter messages that can be sent/received.
+
+      All of the args in the passed attrset turn into arguments for
+      `xdg-dbus-proxy`. They are all optional.
+
+      Example:
+      ```
+      dbus {
+        talk = [
+          "ca.desrt.dconf"
+          "org.a11y.Bus"
+          "org.freedesktop.DBus"
+          "org.freedesktop.portal.*"
+          "org.gtk.vfs"
+          "org.gtk.vfs.*"
+        ];
+      }
+      ```
+    '';
+    __functor = _:
+      { own ? [], talk ? [], see ? [], call ? [], broadcast ? [] }:
+        let
+          proxy = jail "xdg-dbus-proxy" pkgs.xdg-dbus-proxy [
+            unsafe-dbus
+            (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
+          ];
+
+          args = [ "--filter" ]
+            ++ map (id: "--own=${lib.escapeShellArg id}") own
+            ++ map (id: "--talk=${lib.escapeShellArg id}") talk
+            ++ map (id: "--see=${lib.escapeShellArg id}") see
+            ++ map (id: "--call=${lib.escapeShellArg id}") call
+            ++ map (id: "--broadcast=${lib.escapeShellArg id}") broadcast;
+        in
+          compose [
+            (add-runtime ''
+              PROXIED_DBUS_SOCKET_DIR=$(mktemp -d)
+              export PROXIED_DBUS_SOCKET_DIR
+              PROXIED_DBUS_SOCKET="$PROXIED_DBUS_SOCKET_DIR/socket"
+              mkfifo "$PROXIED_DBUS_SOCKET_DIR/ready"
+              exec {XDG_DBUS_PROXY_READY_FD}<>"$PROXIED_DBUS_SOCKET_DIR/ready"
+              ${lib.getExe proxy} \
+                "$DBUS_SESSION_BUS_ADDRESS" \
+                "$PROXIED_DBUS_SOCKET" \
+                --fd="$XDG_DBUS_PROXY_READY_FD" \
+                ${lib.concatStringsSep " " args} \
+                &
+              PROXY_PID=$!
+              IFS= read -rn1 -u "$XDG_DBUS_PROXY_READY_FD"
+            '')
+            (add-cleanup ''
+              kill "$PROXY_PID"
+              if [ -e "''${PROXIED_DBUS_SOCKET_DIR-}" ]; then
+                rm -rf "$PROXIED_DBUS_SOCKET_DIR"
+              fi
+            '')
+            (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
+            (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"unix:path=$PROXIED_DBUS_SOCKET\""))
+          ]
+    ;
+  };
+
   unsafe-dbus = {
     sig = "Permission";
     doc = ''
       Exposes D-Bus to the jailed program.
 
-      This does no message filtering so it is marked as unsafe. In the future
-      this library will include a combinator that uses
-      [xdg-dbus-proxy](https://github.com/flatpak/xdg-dbus-proxy) to specify a
-      set of allowed messages.
+      This does no message filtering so it is marked as unsafe. If you want
+      more control over the messages that can be sent/received, consider using
+      the [dbus](#dbus) combinator instead.
     '';
     __functor = _:
       compose [

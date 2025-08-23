@@ -5,7 +5,7 @@
 }: let
   inherit (pkgs) lib;
 
-  builtinCombinators = import ./combinators.nix pkgs;
+  builtinCombinators = import ./combinators.nix pkgs jail;
 
   allCombinators = builtinCombinators // additionalCombinators builtinCombinators;
 
@@ -16,10 +16,7 @@
       if t == "null" then []
       else throw "Unknown combinator type ${t}. Must be a function, list, or null";
 
-in {
-  combinators = allCombinators;
-
-  __functor = _: name: exe: permissions: let
+  jail = name: exe: permissions: let
     initialState = {
       name = name;
       cmd = lib.getExe bubblewrapPackage;
@@ -84,4 +81,8 @@ in {
       (jailed: if exe ? man then jailed // { inherit (exe) man; } else jailed)
     ]
   );
+
+in {
+  combinators = allCombinators;
+  __functor = _: jail;
 }

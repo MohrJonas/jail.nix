@@ -8,6 +8,7 @@ tests:
       - base
       - bytestring
       - containers
+      - dbus
       - extra
       - filepath
       - hspec
@@ -23,7 +24,9 @@ default-extensions:
   - FlexibleInstances
   - GeneralizedNewtypeDeriving
   - ImportQualifiedPost
+  - LambdaCase
   - NamedFieldPuns
+  - OverloadedStrings
   - QuasiQuotes
   - ScopedTypeVariables
   - TupleSections

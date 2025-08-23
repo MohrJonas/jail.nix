@@ -30,11 +30,10 @@
     '';
 
     combinatorDocs = let
-      allCombinators = import ../lib/combinators.nix {
-        pkgs = throw "Docs must not depend on pkgs";
-        lib = throw "Docs must not depend on lib";
-        helpers = throw "Docs must not depend on helpers";
-      };
+      allCombinators = import ../lib/combinators.nix
+        (throw "Docs must not depend on args")
+        (throw "Docs must not depend on args")
+      ;
 
       formatSection = filter:
         lib.pipe allCombinators [

@@ -13,6 +13,7 @@ test-suite spec
   main-is: Spec.hs
   other-modules:
       CombinatorsSpec
+      DBusCombinatorsSpec
       JailSpec
       TestPrelude
       Paths_jail_nix_tests
@@ -23,7 +24,9 @@ test-suite spec
       FlexibleInstances
       GeneralizedNewtypeDeriving
       ImportQualifiedPost
+      LambdaCase
       NamedFieldPuns
+      OverloadedStrings
       QuasiQuotes
       ScopedTypeVariables
       TupleSections
@@ -34,6 +37,7 @@ test-suite spec
     , base
     , bytestring
     , containers
+    , dbus
     , extra
     , filepath
     , hspec

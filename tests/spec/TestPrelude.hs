@@ -14,13 +14,14 @@ module TestPrelude
     toNixString,
     void,
     withEnv,
+    lifted,
   )
 where
 
 import Control.Monad
 import Control.Monad.Extra (mapMaybeM)
 import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Reader (MonadIO, MonadReader, ReaderT, asks, local, runReaderT)
+import Control.Monad.Reader (MonadIO, MonadReader, ReaderT, ask, asks, local, runReaderT)
 import Data.Aeson qualified as Aeson
 import Data.Function ((&))
 import Data.List.Extra
@@ -49,6 +50,11 @@ newtype TestM a = TestM {testMReaderT :: ReaderT Context IO a}
       MonadReader Context
     )
 
+lifted :: ((a -> IO b) -> IO c) -> (a -> TestM b) -> TestM c
+lifted io action = do
+  ctx <- ask
+  liftIO $ io $ flip runReaderT ctx . testMReaderT . action
+
 instance Example (TestM ()) where
   type Arg (TestM ()) = Context
   evaluateExample test _ hook _ = do
@@ -67,7 +73,9 @@ inTestM = aroundWith $ \action () -> do
           (\(name, getVal) -> ((name,) <$>) <$> getVal)
           [ ("HOME", lookupEnv "HOME"),
             ("LANG", pure $ Just "en_US.UTF-8"),
-            ("PATH", lookupEnv "PATH")
+            ("PATH", lookupEnv "PATH"),
+            ("DBUS_SESSION_BUS_ADDRESS", lookupEnv "DBUS_SESSION_BUS_ADDRESS"),
+            ("XDG_RUNTIME_DIR", lookupEnv "XDG_RUNTIME_DIR")
           ]
     action $
       Context
