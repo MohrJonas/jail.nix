@@ -1,4 +1,4 @@
-pkgs: let helpers = import ./helpers.nix pkgs; in combinators: with combinators; [
+pkgs: combinators: with combinators; [
   (unsafe-add-raw-args "--proc /proc")
   (unsafe-add-raw-args "--dev /dev")
   (unsafe-add-raw-args "--tmpfs /tmp")
