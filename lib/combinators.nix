@@ -1122,6 +1122,24 @@ in rec {
     ;
   };
 
+  open-urls-in-browser = {
+    sig = "Combinator";
+    doc = ''
+      Allows access to open URLs in `$BROWSER`.
+
+      This works by creating a pipe that is mounted into the jail that forwards
+      all URLs to the `$BROWSER` outside of the jail. This way the jailed
+      program can launch your browser, even if it has a subset of the
+      permissions your browser has.
+    '';
+    __functor = _:
+      compose [
+        (jail-to-host-channel "browserchannel" ''"$BROWSER" "$1"'')
+        (set-env "BROWSER" "browserchannel")
+      ]
+    ;
+  };
+
   ############################################
   # deprecated
   persisthome = {

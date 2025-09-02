@@ -111,6 +111,25 @@ spec = parallel $ inTestM $ do
           |]
       liftIO $ (read out :: Int) `shouldSatisfy` (< 100)
 
+  describe "open-urls-in-browser" $ do
+    it "exposes a $BROWSER in the jail that calls $BROWSER outside of the jail" $ do
+      tmpDir <- getTestDir
+      void $
+        runNixDrv
+          [i|
+            let
+              fakeBrowser = sh ''
+                echo "got url: $1" >> #{tmpDir </> "fake-browser"}
+              '';
+              jailed = jail "test" (sh ''$BROWSER https://example.org'') (c: [
+                c.open-urls-in-browser
+              ]);
+            in sh ''
+              BROWSER=${lib.getExe fakeBrowser} ${lib.getExe jailed}
+            ''
+          |]
+      liftIO $ readFile (tmpDir </> "fake-browser") `shouldReturn` "got url: https://example.org\n"
+
   describe "readonly-from-path-var" $ do
     forM_ [":", " "] $ \separator ->
       describe ("with separator \"" <> separator <> "\"") $ do
