@@ -16,6 +16,7 @@ tests:
       - interpolate
       - mtl
       - process
+      - random
       - string-conversions
       - temporary
 

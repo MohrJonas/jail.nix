@@ -4,12 +4,12 @@ import Control.Concurrent (modifyMVar_, newMVar, readMVar)
 import Control.Exception (bracket)
 import DBus qualified
 import DBus.Client qualified as DBus
+import System.Random
 import Test.Hspec
 import TestPrelude
 
 spec :: Spec
 spec = inTestM $ do
-  let mockBusName = "foo.bar"
   let mockMethod =
         MockDBusMethod
           { objPath = "/foo/bar/baz",
@@ -19,7 +19,7 @@ spec = inTestM $ do
 
   describe "unsafe-dbus" $ do
     it "gives unfiltered access to DBus method calls" $ do
-      (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
+      (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
         withMockDBusMethodHandler client mockMethod "some return value" $ do
           runNixDrv
             [i|
@@ -32,7 +32,7 @@ spec = inTestM $ do
         methodCalls `shouldBe` ["some arg"]
 
     it "gives unfiltered access to DBus signals" $ do
-      (_, signals) <- withDBusClient mockBusName $ \client -> do
+      (_, signals) <- withDBusClient $ \mockBusName client -> do
         withMockDBusSignalHandler client mockMethod $ do
           runNixDrv
             [i|
@@ -45,7 +45,7 @@ spec = inTestM $ do
   describe "dbus" $ do
     describe "sending signals from within the jail" $ do
       it "filters all signals if there are no rules" $ do
-        (_, signals) <- withDBusClient mockBusName $ \client -> do
+        (_, signals) <- withDBusClient $ \mockBusName client -> do
           withMockDBusSignalHandler client mockMethod $ do
             runNixDrv
               [i|
@@ -57,7 +57,7 @@ spec = inTestM $ do
 
     describe "calling methods from within the jail" $ do
       it "allows method calls that match the call filter rules" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
+        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -72,7 +72,7 @@ spec = inTestM $ do
           methodCalls `shouldBe` ["some arg"]
 
       it "allows method calls if the receiving bus has `own` privileges" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
+        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -87,7 +87,7 @@ spec = inTestM $ do
           methodCalls `shouldBe` ["some arg"]
 
       it "allows method calls if the receiving bus has `talk` privileges" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
+        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -102,7 +102,7 @@ spec = inTestM $ do
           methodCalls `shouldBe` ["some arg"]
 
       it "filters method calls if the receiving bus only has `see` privileges" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
+        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -117,7 +117,7 @@ spec = inTestM $ do
           methodCalls `shouldBe` []
 
       it "filters all method calls if there are no rules" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
+        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -130,7 +130,7 @@ spec = inTestM $ do
           methodCalls `shouldBe` []
 
       it "filters method calls if the rules do not match" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
+        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             let otherMockMethod = mockMethod {objPath = "/some/unrelated/object/path"}
             runNixDrv
@@ -147,14 +147,16 @@ spec = inTestM $ do
 
 -- * DBus test helpers
 
-withDBusClient :: DBus.BusName -> (DBus.Client -> TestM a) -> TestM a
-withDBusClient busName action = do
+withDBusClient :: (DBus.BusName -> DBus.Client -> TestM a) -> TestM a
+withDBusClient action = do
+  rand :: Int <- liftIO randomIO
+  mockBusName <- liftIO $ DBus.parseBusName $ "id.alexdav.jailnix.test" <> show rand
   let setup = do
         client <- liftIO DBus.connectSession
-        DBus.requestName client busName [DBus.nameDoNotQueue] >>= \case
+        DBus.requestName client mockBusName [DBus.nameDoNotQueue] >>= \case
           DBus.NamePrimaryOwner -> pure client
           reply -> error $ "Got unexpected requestName reply: " <> show reply
-  lifted (bracket setup DBus.disconnect) action
+  lifted (bracket setup DBus.disconnect) $ action mockBusName
 
 data MockDBusMethod = MockDBusMethod
   { objPath :: DBus.ObjectPath,
