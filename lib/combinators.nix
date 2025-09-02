@@ -457,6 +457,70 @@ in rec {
     ;
   };
 
+  runtime-deep-ro-bind = {
+    sig = "String -> Permission";
+    doc = ''
+      This is an internal (for now) combinator to bind a path at runtime in a
+      way.
+
+      This is marked as internal which means it isn't publicly documented on
+      the website since this will likely change in the future. Feel free to
+      use, but a future update may break this combinator.
+    '';
+    internal = true;
+    __functor = _: let
+      bindRuntimeHelperFunction = include-once "bindRuntimeHelperFunction" (
+        add-runtime ''
+          function bindNixStoreClosure {
+            local NIX_STORE_PATH
+            NIX_STORE_PATH="$1"
+            while read -r P; do
+              RUNTIME_ARGS+=(--ro-bind "$P" "$P")
+            done <<< "$(${pkgs.nix}/bin/nix-store --query --requisites "$NIX_STORE_PATH")"
+          }
+
+          function bindRuntime {
+            local MAX_DEPTH
+            local PATH_TO_BIND
+            MAX_DEPTH="$1"
+            PATH_TO_BIND="$2"
+            if ((MAX_DEPTH <= 0)); then
+              echo "jail.nix: bindRuntime hit max depth" >&2
+              exit 1
+            fi
+            if ! [ -e "$PATH_TO_BIND" ]; then
+              return
+            fi
+            case $(stat -c '%F' "$PATH_TO_BIND") in
+              'regular file'|socket)
+                RUNTIME_ARGS+=(--ro-bind "$PATH_TO_BIND" "$PATH_TO_BIND")
+              ;;
+              directory)
+                for DIR_ENTRY in "$PATH_TO_BIND"/*; do
+                  [ -e "$DIR_ENTRY" ] || continue
+                  bindRuntime "$((MAX_DEPTH - 1))" "$DIR_ENTRY"
+                done
+              ;;
+              'symbolic link')
+                LINK_PATH=$(realpath "$PATH_TO_BIND")
+                RUNTIME_ARGS+=(--symlink "$LINK_PATH" "$PATH_TO_BIND")
+                if [[ "$LINK_PATH" == /nix/store/* ]]; then
+                  bindNixStoreClosure "$LINK_PATH"
+                fi
+              ;;
+            esac
+          }
+        ''
+      );
+      in path:
+        compose [
+          bindRuntimeHelperFunction
+          (add-runtime "bindRuntime 5 ${escape path}")
+        ]
+      ;
+  };
+
+
   readonly = {
     sig = "String -> Permission";
     doc = ''
@@ -676,7 +740,7 @@ in rec {
         pulse
         pipewire
         wayland
-        (readonly (noescape "/etc/fonts"))
+        (runtime-deep-ro-bind (noescape "/etc/fonts"))
         (readonly (noescape "~/.config/dconf"))
         (fwd-env "XDG_RUNTIME_DIR")
         (fwd-env "XDG_DATA_DIRS")
@@ -794,8 +858,8 @@ in rec {
     __functor = _:
       include-once "gpu"
       (compose [
-        (readwrite (noescape "/run/opengl-driver"))
-        (unsafe-add-raw-args "--bind-try /run/opengl-driver-32 /run/opengl-driver-32")
+        (runtime-deep-ro-bind (noescape "/run/opengl-driver"))
+        (runtime-deep-ro-bind (noescape "/run/opengl-driver-32"))
         (readonly (noescape "/sys"))
         (unsafe-add-raw-args "--dev-bind /dev/dri /dev/dri")
       ])
@@ -809,11 +873,7 @@ in rec {
     '';
     __functor = _:
       include-once "time-zone"
-      (compose [
-        (unsafe-add-raw-args "--symlink \"$(readlink /etc/localtime)\" /etc/localtime")
-        (readonly "/etc/static/zoneinfo")
-        (readonly "/etc/zoneinfo")
-      ])
+      (runtime-deep-ro-bind "/etc/localtime")
     ;
   };
 
@@ -832,12 +892,10 @@ in rec {
       (state: compose [
         time-zone
         (share-ns "net")
-        (readonly "/etc/hosts")
-        (readonly "/etc/nsswitch.conf")
-        (readonly "/etc/resolv.conf")
-        (readonly "/etc/ssl")
-        (readonly "/etc/static/nsswitch.conf")
-        (readonly "/etc/static/ssl")
+        (runtime-deep-ro-bind "/etc/hosts")
+        (runtime-deep-ro-bind "/etc/nsswitch.conf")
+        (runtime-deep-ro-bind "/etc/resolv.conf")
+        (runtime-deep-ro-bind "/etc/ssl")
         (write-text "/etc/hostname" "${state.hostname}\n")
         (unsafe-add-raw-args "--hostname ${escape state.hostname}")
       ] state)

@@ -44,6 +44,8 @@
         ];
 
       hr = ''<hr style="border: 2px solid #272525">'';
+
+      is = flag: combinator: combinator ? ${flag} && combinator.${flag};
     in ''
       # Combinators
 
@@ -61,7 +63,7 @@
 
       ${hr}
 
-      ${formatSection (v: !(v ? deprecated || v ? includedInBasePermissions))}
+      ${formatSection (v: !(is "deprecated" v || is "includedInBasePermissions" v || is "internal" v))}
 
       ${hr}
 
@@ -71,7 +73,7 @@
       explicitly added to your jails unless you [override
       `basePermissions`](advanced-configuration.md#basepermissions).
 
-      ${formatSection (v: v ? includedInBasePermissions)}
+      ${formatSection (is "includedInBasePermissions")}
 
       ${hr}
 
@@ -80,7 +82,7 @@
       The following combinators have been deprecated, and may be removed in the
       future.
 
-      ${formatSection (v: v ? deprecated)}
+      ${formatSection (is "deprecated")}
     '';
 
     mkdocsSettings = {

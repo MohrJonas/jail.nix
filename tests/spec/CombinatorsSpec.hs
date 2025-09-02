@@ -63,6 +63,40 @@ spec = parallel $ inTestM $ do
         |]
           `shouldOutput` "secret\n"
 
+  describe "network" $ do
+    it "grants network access to the jailed program" $ do
+      out <-
+        runNixDrv
+          [i|
+            jail "test" (sh ''curl https://example.org'') (c: [
+              (c.add-pkg-deps [ pkgs.curl ])
+              c.network
+            ])
+          |]
+      liftIO $ out `shouldContain` "<h1>Example Domain</h1>"
+
+    it "does not add too many bwrap args" $ do
+      out <-
+        runNixDrv
+          [i|
+            let
+              jail' = jail-nix.extend {
+                inherit pkgs;
+                bubblewrapPackage = pkgs.writeShellApplication {
+                  name = "my-bubblewrap";
+                  text = ''
+                    # A version of bwrap that just prints how many arguments it
+                    # was passed instead of actually running a jail.
+                    echo -n "$#"
+                  '';
+                };
+                basePermissions = null;
+              };
+            in
+              jail' "test" "unused" (c: [ c.network ])
+          |]
+      liftIO $ (read out :: Int) `shouldSatisfy` (< 100)
+
   describe "readonly-from-path-var" $ do
     forM_ [":", " "] $ \separator ->
       describe ("with separator \"" <> separator <> "\"") $ do
