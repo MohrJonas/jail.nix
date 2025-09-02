@@ -91,6 +91,51 @@ following positional arguments:
 
 ---
 
+## Overlays
+
+If you prefer, you can jail packages in a nixpkgs overlay using
+`jail-nix.lib.mkOverlay`. This takes attribute set with `prev` and `final`
+passed in, and `packages` which is a function from combinators to an attribute
+set of package name to permissions.
+
+All of the options from [Advanced Configuration](advanced-configuration.md) can
+optionally be passed into `mkOverlay` attribute set as well.
+
+
+Example:
+
+```nix
+jailOverlay = final: prev: jail-nix.lib.mkOverlay {
+  inherit final prev;
+  packages = combinators: with combinators; {
+    nodejs = [ network ];
+    firefox = [ network gui gpu ];
+  };
+};
+pkgs = import nixpkgs {
+  system = "x86_64-linux";
+  overlays = [ jailOverlay ];
+};
+```
+
+This will then override the packages in `pkgs` with jailed versions, but also
+expose `pkgs.«name».jailed` and `pkgs.«name».unjailed` on each overlaid
+package. The `unjailed` is useful to get access to the original unjailed
+package, and `jailed` is nice to use if you want to be explicit in the fact
+that you are using the jailed package.
+
+```nix
+{
+  environment.systemPackages = [
+    pkgs.firefox          # jailed
+    pkgs.firefox.jailed   # jailed (explicitly)
+    pkgs.firefox.unjailed # unjailed
+  ]
+}
+```
+
+---
+
 ## Examples
 
 ### Provide jail.nix as a module arg in a Nixos configuration:

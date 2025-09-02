@@ -15,6 +15,7 @@ test-suite spec
       CombinatorsSpec
       DBusCombinatorsSpec
       JailSpec
+      OverlaySpec
       TestPrelude
       Paths_jail_nix_tests
   hs-source-dirs:
