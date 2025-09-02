@@ -63,6 +63,20 @@ spec = parallel $ inTestM $ do
         |]
           `shouldOutput` "secret\n"
 
+  describe "jail-to-host-channel" $ do
+    it "calls a script on the outside of the jail with an argument and returns its stdout" $ do
+      tmpDir <- getTestDir
+      liftIO $ writeFile (tmpDir </> "secret") "hunter2"
+      [i|
+        jail "test" (sh ''getsha1 "#{tmpDir </> "secret"}"'') (c: [
+          (c.jail-to-host-channel "getsha1" ''
+            echo "this runs outside of the jail"
+            sha1sum < "$1"
+          '')
+        ])
+      |]
+        `shouldOutput` "this runs outside of the jail\nf3bbbd66a63d4bf1747940578ec3d0103530e21d  -\n"
+
   describe "network" $ do
     it "grants network access to the jailed program" $ do
       out <-
