@@ -52,7 +52,7 @@
       which grant a program specific permissions at runtime.
 
       These permissions can be passed into the third argument to `jail`
-      funciton, as well as
+      function, as well as
       [`basePermissions`](advanced-configuration.md#basepermissions).
 
       A `Permission` is a `State -> State` function where `State` is an
