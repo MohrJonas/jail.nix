@@ -8,6 +8,11 @@ A helper to make it easy and ergonomic to wrap your derivations in
 Please send patches, questions and discussions to my [general mailing
 list](https://lists.sr.ht/~alexdavid/general).
 
+## Getting Started
+
+Documentation to install and get started can be found
+[here](https://alexdav.id/projects/jail-nix).
+
 ## Example
 
 ```nix
