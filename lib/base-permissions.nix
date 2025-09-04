@@ -6,7 +6,7 @@ pkgs: combinators: with combinators; [
   (unsafe-add-raw-args "--clearenv")
   (unsafe-add-raw-args "--die-with-parent")
   (add-pkg-deps [ pkgs.coreutils ])
-  (readonly "/bin/sh")
+  (ro-bind "${pkgs.bash}/bin/sh" "/bin/sh")
   (fwd-env "LANG")
   (fwd-env "HOME")
   (fwd-env "TERM")
