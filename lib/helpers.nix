@@ -5,8 +5,10 @@ pkgs: rec {
 
   noescape = value: { _noescape = value; };
 
-  escape = rawOrStr:
-    if builtins.typeOf rawOrStr == "set" && rawOrStr ? _noescape
-    then rawOrStr._noescape
-    else pkgs.lib.strings.escapeShellArg rawOrStr;
+  escape =
+    rawOrStr:
+    if builtins.typeOf rawOrStr == "set" && rawOrStr ? _noescape then
+      rawOrStr._noescape
+    else
+      pkgs.lib.strings.escapeShellArg rawOrStr;
 }

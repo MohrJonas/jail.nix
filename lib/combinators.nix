@@ -1,7 +1,9 @@
-pkgs: jail: let
+pkgs: jail:
+let
   inherit (pkgs) lib;
   helpers = import ./helpers.nix pkgs;
-in rec {
+in
+rec {
   noescape = {
     sig = "String -> NoEscapedString";
     doc = ''
@@ -79,9 +81,7 @@ in rec {
       }
       ```
     '';
-    __functor = _:
-      lib.flip lib.pipe
-    ;
+    __functor = _: lib.flip lib.pipe;
   };
 
   defer = {
@@ -119,10 +119,9 @@ in rec {
       ])
       ```
     '';
-    __functor = _:
-      combinator: state:
-        state // { deferredPermissions = state.deferredPermissions ++ [ combinator ]; }
-    ;
+    __functor =
+      _: combinator: state:
+      state // { deferredPermissions = state.deferredPermissions ++ [ combinator ]; };
   };
 
   include-once = {
@@ -161,12 +160,12 @@ in rec {
         ])
       ```
     '';
-    __functor = _:
-      key: combinator: state:
-        if lib.elem key state.includedOnce
-        then state
-        else combinator (state // { includedOnce = state.includedOnce ++ [ key ]; })
-    ;
+    __functor =
+      _: key: combinator: state:
+      if lib.elem key state.includedOnce then
+        state
+      else
+        combinator (state // { includedOnce = state.includedOnce ++ [ key ]; });
   };
 
   unsafe-add-raw-args = {
@@ -177,9 +176,9 @@ in rec {
       Nothing is escaped, it is the caller's responsibility to ensure
       everything is properly escaped.
     '';
-    __functor = _:
-      args: state: state // { cmd = "${state.cmd} ${args}"; }
-    ;
+    __functor =
+      _: args: state:
+      state // { cmd = "${state.cmd} ${args}"; };
   };
 
   add-path = {
@@ -187,12 +186,12 @@ in rec {
     doc = ''
       Prepends the passed string to `$PATH`.
     '';
-    __functor = _:
-      path: state: state // { path = [ path ] ++ state.path; }
-    ;
+    __functor =
+      _: path: state:
+      state // { path = [ path ] ++ state.path; };
   };
 
-   set-argv = {
+  set-argv = {
     sig = "[String] -> Permission";
     doc = ''
       Overrides the current argv that is passed to the jailed executable.
@@ -201,9 +200,9 @@ in rec {
       arguments are provided to the wrapper script at runtime. Calling this
       will override the current value.
     '';
-    __functor = _:
-      argv: state: state // { argv = builtins.concatStringsSep " " (builtins.map escape argv); }
-    ;
+    __functor =
+      _: argv: state:
+      state // { argv = builtins.concatStringsSep " " (builtins.map escape argv); };
   };
 
   add-runtime = {
@@ -232,9 +231,9 @@ in rec {
       If you create any resources in add-runtime that you want to automatically
       clean up when the jail exits use [add-cleanup](#add-cleanup).
     '';
-    __functor = _:
-      runtime: state: state // { runtime = "${state.runtime}\n${runtime}\n"; }
-    ;
+    __functor =
+      _: runtime: state:
+      state // { runtime = "${state.runtime}\n${runtime}\n"; };
   };
 
   add-cleanup = {
@@ -266,9 +265,9 @@ in rec {
       ]
       ```
     '';
-    __functor = _:
-      cleanup: state: state // { cleanup = state.cleanup ++ [ cleanup ]; }
-    ;
+    __functor =
+      _: cleanup: state:
+      state // { cleanup = state.cleanup ++ [ cleanup ]; };
   };
 
   fake-passwd = {
@@ -277,14 +276,15 @@ in rec {
     doc = ''
       Generates and mounts  fake `/etc/passwd` and `/etc/group` files in the jail.
 
-     The fake `/etc/passwd` and `/etc/group` files contains a root user, and
-     forward the calling user's user id, username, group id and group name.
+      The fake `/etc/passwd` and `/etc/group` files contains a root user, and
+      forward the calling user's user id, username, group id and group name.
 
-     If you do not want to hide the users and groups that exist on your system,
-     you may consider just bind mounting `/etc/passwd` and `/etc/group` inside
-     the jail instead.
+      If you do not want to hide the users and groups that exist on your system,
+      you may consider just bind mounting `/etc/passwd` and `/etc/group` inside
+      the jail instead.
     '';
-    __functor = _:
+    __functor =
+      _:
       compose [
         (add-runtime ''
           if [ ! -e ${helpers.dataDirSubPath "passwd"} ] || [ ! -e ${helpers.dataDirSubPath "group"} ]; then
@@ -298,8 +298,7 @@ in rec {
         '')
         (ro-bind (noescape (helpers.dataDirSubPath "passwd")) "/etc/passwd")
         (ro-bind (noescape (helpers.dataDirSubPath "group")) "/etc/group")
-      ]
-    ;
+      ];
   };
 
   wrap-entry = {
@@ -321,14 +320,17 @@ in rec {
       ${"''"})
       ```
     '';
-    __functor = _:
-      getWrapper: state: state // {
-        entry = lib.getExe (pkgs.writeShellApplication {
-          name = "${state.name}-jail-wrapper";
-          text = getWrapper state.entry;
-        });
-      }
-    ;
+    __functor =
+      _: getWrapper: state:
+      state
+      // {
+        entry = lib.getExe (
+          pkgs.writeShellApplication {
+            name = "${state.name}-jail-wrapper";
+            text = getWrapper state.entry;
+          }
+        );
+      };
   };
 
   add-pkg-deps = {
@@ -336,9 +338,7 @@ in rec {
     doc = ''
       Adds the packages' `bin` directory to `$PATH`.
     '';
-    __functor = _:
-      pkgs: compose (builtins.map (pkg: add-path "${lib.getBin pkg}/bin") pkgs)
-    ;
+    __functor = _: pkgs: compose (builtins.map (pkg: add-path "${lib.getBin pkg}/bin") pkgs);
   };
 
   no-new-session = {
@@ -352,9 +352,7 @@ in rec {
 
       See BWRAP(1) for more information and security implications.
     '';
-    __functor = _:
-      state: state // { newSession = false; }
-    ;
+    __functor = _: state: state // { newSession = false; };
   };
 
   set-env = {
@@ -364,9 +362,14 @@ in rec {
 
       This will throw if the variable name is not a valid posix variable name.
     '';
-    __functor = _:
-      name: value: state: state // { env = state.env // { ${name} = escape value; }; }
-    ;
+    __functor =
+      _: name: value: state:
+      state
+      // {
+        env = state.env // {
+          ${name} = escape value;
+        };
+      };
   };
 
   share-ns = {
@@ -380,9 +383,14 @@ in rec {
 
       See BWRAP(1) for more information.
     '';
-    __functor = _:
-      namespace: state: state // { namespaces = state.namespaces // { ${namespace} = true; }; }
-    ;
+    __functor =
+      _: namespace: state:
+      state
+      // {
+        namespaces = state.namespaces // {
+          ${namespace} = true;
+        };
+      };
   };
 
   set-hostname = {
@@ -400,9 +408,9 @@ in rec {
       ]
       ```
     '';
-    __functor = _:
-      hostname: state: state // { inherit hostname; }
-    ;
+    __functor =
+      _: hostname: state:
+      state // { inherit hostname; };
   };
 
   tmpfs = {
@@ -410,9 +418,7 @@ in rec {
     doc = ''
       Mounts a new tmpfs at the specified location.
     '';
-    __functor = _:
-      path: unsafe-add-raw-args "--tmpfs ${escape path}"
-    ;
+    __functor = _: path: unsafe-add-raw-args "--tmpfs ${escape path}";
   };
 
   camera = {
@@ -420,15 +426,14 @@ in rec {
     doc = ''
       Allows access to webcams and other V4L2 video devices at `/dev/video*`.
     '';
-    __functor = _:
-      include-once "camera"
-      (add-runtime ''
+    __functor =
+      _:
+      include-once "camera" (add-runtime ''
         for v in /dev/video*; do
           [ -e "$v" ] || continue
           RUNTIME_ARGS+=(--dev-bind "$v" "$v")
         done
-      '')
-    ;
+      '');
   };
 
   fwd-env = {
@@ -442,9 +447,7 @@ in rec {
       If you want to be tolerant of the environment being unset, use
       [try-fwd-env](#try-fwd-env) instead.
     '';
-    __functor = _:
-      name: set-env name (noescape "\"\$${name}\"")
-    ;
+    __functor = _: name: set-env name (noescape "\"\$${name}\"");
   };
 
   try-fwd-env = {
@@ -452,9 +455,7 @@ in rec {
     doc = ''
       Forwards the specified environment variable to the underlying process (if set).
     '';
-    __functor = _:
-      name: set-env name (noescape "\"\${${name}-}\"")
-    ;
+    __functor = _: name: set-env name (noescape "\"\${${name}-}\"");
   };
 
   runtime-deep-ro-bind = {
@@ -468,9 +469,10 @@ in rec {
       use, but a future update may break this combinator.
     '';
     internal = true;
-    __functor = _: let
-      bindRuntimeHelperFunction = include-once "bindRuntimeHelperFunction" (
-        add-runtime ''
+    __functor =
+      _:
+      let
+        bindRuntimeHelperFunction = include-once "bindRuntimeHelperFunction" (add-runtime ''
           function bindNixStoreClosure {
             local NIX_STORE_PATH
             NIX_STORE_PATH="$1"
@@ -510,25 +512,21 @@ in rec {
               ;;
             esac
           }
-        ''
-      );
-      in path:
-        compose [
-          bindRuntimeHelperFunction
-          (add-runtime "bindRuntime 5 ${escape path}")
-        ]
-      ;
+        '');
+      in
+      path:
+      compose [
+        bindRuntimeHelperFunction
+        (add-runtime "bindRuntime 5 ${escape path}")
+      ];
   };
-
 
   readonly = {
     sig = "String -> Permission";
     doc = ''
       Binds the specified path in the jail as read-only.
     '';
-    __functor = _:
-      path: ro-bind path path
-    ;
+    __functor = _: path: ro-bind path path;
   };
 
   readwrite = {
@@ -536,9 +534,7 @@ in rec {
     doc = ''
       Binds the specified path in the jail as read-write.
     '';
-    __functor = _:
-      path: rw-bind path path
-    ;
+    __functor = _: path: rw-bind path path;
   };
 
   ro-bind = {
@@ -552,9 +548,9 @@ in rec {
       ro-bind "/foo" "/bar"
       ```
     '';
-    __functor = _:
-      from: to: unsafe-add-raw-args "--ro-bind ${escape from} ${escape to}"
-    ;
+    __functor =
+      _: from: to:
+      unsafe-add-raw-args "--ro-bind ${escape from} ${escape to}";
   };
 
   rw-bind = {
@@ -568,9 +564,9 @@ in rec {
       rw-bind "/foo" "/bar"
       ```
     '';
-    __functor = _:
-      from: to: unsafe-add-raw-args "--bind ${escape from} ${escape to}"
-    ;
+    __functor =
+      _: from: to:
+      unsafe-add-raw-args "--bind ${escape from} ${escape to}";
   };
 
   readonly-runtime-args = {
@@ -579,17 +575,16 @@ in rec {
       Binds any valid paths passed in as arguments to the jailed program at
       runtime as read-only.
     '';
-    __functor = _:
-      include-once "readonly-runtime-args"
-      (add-runtime ''
+    __functor =
+      _:
+      include-once "readonly-runtime-args" (add-runtime ''
         for MAYBE_PATH in "$@"; do
           if [ -e "$MAYBE_PATH" ]; then
             P="$(realpath "$MAYBE_PATH")"
             RUNTIME_ARGS+=(--ro-bind "$P" "$P")
           fi
         done
-      '')
-    ;
+      '');
   };
 
   readwrite-runtime-args = {
@@ -598,22 +593,21 @@ in rec {
       Binds any valid paths passed in as arguments to the jailed program at
       runtime as read-write.
     '';
-    __functor = _:
-      include-once "readwrite-runtime-args"
-      (add-runtime ''
+    __functor =
+      _:
+      include-once "readwrite-runtime-args" (add-runtime ''
         for MAYBE_PATH in "$@"; do
           if [ -e "$MAYBE_PATH" ]; then
             P="$(realpath "$MAYBE_PATH")"
             RUNTIME_ARGS+=(--bind "$P" "$P")
           fi
         done
-      '')
-    ;
+      '');
   };
 
   readonly-paths-from-var = {
     sig = "String -> String -> Permission";
-    doc  = ''
+    doc = ''
       This binds multiple paths as read-only specified by a single runtime
       environment variable.
 
@@ -632,19 +626,17 @@ in rec {
       ]
       ```
     '';
-    __functor = _:
-      var: separator:
-        assert pkgs.lib.isValidPosixName var;
-        include-once "readonly-paths-from-var-${var}"
-        (add-runtime ''
-          while read -rd${lib.escapeShellArg separator} DIR; do
-            if [ -e "$DIR" ]; then
-              P="$(realpath "$DIR")"
-              RUNTIME_ARGS+=(--ro-bind "$P" "$P")
-            fi
-          done <<< "''${${var}-}"
-        '')
-    ;
+    __functor =
+      _: var: separator:
+      assert pkgs.lib.isValidPosixName var;
+      include-once "readonly-paths-from-var-${var}" (add-runtime ''
+        while read -rd${lib.escapeShellArg separator} DIR; do
+          if [ -e "$DIR" ]; then
+            P="$(realpath "$DIR")"
+            RUNTIME_ARGS+=(--ro-bind "$P" "$P")
+          fi
+        done <<< "''${${var}-}"
+      '');
   };
 
   mount-cwd = {
@@ -652,10 +644,7 @@ in rec {
     doc = ''
       Bind mounts the runtime working directory as read-write.
     '';
-    __functor = _:
-      include-once "mount-cwd"
-      (unsafe-add-raw-args "--bind \"$PWD\" \"$PWD\"")
-    ;
+    __functor = _: include-once "mount-cwd" (unsafe-add-raw-args "--bind \"$PWD\" \"$PWD\"");
   };
 
   bind-nix-store-runtime-closure = {
@@ -694,35 +683,39 @@ in rec {
       ```
       rather than your entire nix store.
     '';
-    __functor = _:
-      include-once "bind-nix-store-runtime-closure" (defer (state:
-        let
-          runtimeClosure = pkgs.writeText "${state.name}-runtime-closure" ''
-            ${pkgs.lib.concatStringsSep "\n" state.additionalRuntimeClosures}
-            ${pkgs.lib.concatStringsSep "\n" state.path}
-            ${state.argv}
-            ${state.entry}
-          '';
-          bindArgs = pkgs.runCommand "${state.name}-runtime-closure-bind-args"
-            {
-              __structuredAttrs = true;
-              exportReferencesGraph.runtime = runtimeClosure;
-              nativeBuildInputs = [ pkgs.jq ];
-            }
-            ''
-              while read -r DEP; do
-                printf '%s\0' --ro-bind "$DEP" "$DEP" >> $out
-              done <<< "$(jq -r '.runtime | map(.path) | sort | .[]' "$NIX_ATTRS_JSON_FILE")"
+    __functor =
+      _:
+      include-once "bind-nix-store-runtime-closure" (
+        defer (
+          state:
+          let
+            runtimeClosure = pkgs.writeText "${state.name}-runtime-closure" ''
+              ${pkgs.lib.concatStringsSep "\n" state.additionalRuntimeClosures}
+              ${pkgs.lib.concatStringsSep "\n" state.path}
+              ${state.argv}
+              ${state.entry}
             '';
-        in
+            bindArgs =
+              pkgs.runCommand "${state.name}-runtime-closure-bind-args"
+                {
+                  __structuredAttrs = true;
+                  exportReferencesGraph.runtime = runtimeClosure;
+                  nativeBuildInputs = [ pkgs.jq ];
+                }
+                ''
+                  while read -r DEP; do
+                    printf '%s\0' --ro-bind "$DEP" "$DEP" >> $out
+                  done <<< "$(jq -r '.runtime | map(.path) | sort | .[]' "$NIX_ATTRS_JSON_FILE")"
+                '';
+          in
           compose [
             # Use `--args` and a file descriptor here in case the runtime
             # closure is huge, to avoid running into argv size limitations
             (add-runtime "exec {RUNTIME_CLOSURE_BIND_ARGS_FD}<${bindArgs}")
             (unsafe-add-raw-args "--args \"$RUNTIME_CLOSURE_BIND_ARGS_FD\"")
           ] state
-      ))
-    ;
+        )
+      );
   };
 
   gui = {
@@ -734,7 +727,8 @@ in rec {
       [wayland](#wayland), and forwards/binds a few other paths to get fonts
       and cursor to render correctly.
     '';
-    __functor = _:
+    __functor =
+      _:
       compose [
         (add-runtime "mkdir -p ~/.config/dconf")
         pulse
@@ -751,8 +745,7 @@ in rec {
         (try-fwd-env "XCURSOR_PATH")
         (try-fwd-env "XCURSOR_SIZE")
         (readonly-paths-from-var "XCURSOR_PATH" " ")
-      ]
-    ;
+      ];
   };
 
   wayland = {
@@ -760,14 +753,14 @@ in rec {
     doc = ''
       Exposes your wayland compositor to the jail.
     '';
-    __functor = _:
+    __functor =
+      _:
       compose [
         (fwd-env "WAYLAND_DISPLAY")
         (fwd-env "XDG_RUNTIME_DIR")
         (fwd-env "XDG_SESSION_TYPE")
         (readonly (noescape "\"$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY\""))
-      ]
-    ;
+      ];
   };
 
   xwayland = {
@@ -787,17 +780,16 @@ in rec {
       run with this combinator will spin up its own personal xwayland-satelite
       server, which will consume more resources than having a global one.
     '';
-    __functor = _:
-      include-once "xwayland"
-      (compose [
+    __functor =
+      _:
+      include-once "xwayland" (compose [
         wayland
         (set-env "DISPLAY" ":42")
         (wrap-entry (entry: ''
           ${lib.getExe pkgs.xwayland-satellite} :42 &
           ${entry}
         ''))
-      ])
-    ;
+      ]);
   };
 
   unsafe-x11 = {
@@ -811,12 +803,12 @@ in rec {
       For a safer alternative, consider using the [xwayland](#xwayland)
       combinator inside of a wayland compositor.
     '';
-    __functor = _:
+    __functor =
+      _:
       compose [
         (fwd-env "DISPLAY")
         (readwrite "/tmp/.X11-unix")
-      ]
-    ;
+      ];
   };
 
   pulse = {
@@ -824,15 +816,14 @@ in rec {
     doc = ''
       Exposes pulseaudio to the jailed application.
     '';
-    __functor = _:
-      include-once "pulse"
-      (compose [
+    __functor =
+      _:
+      include-once "pulse" (compose [
         (fwd-env "XDG_RUNTIME_DIR")
         (try-fwd-env "PULSE_SERVER")
         (unsafe-add-raw-args "--bind-try /run/pulse /run/pulse")
         (unsafe-add-raw-args "--bind-try \"$XDG_RUNTIME_DIR/pulse\" \"$XDG_RUNTIME_DIR/pulse\"")
-      ])
-    ;
+      ]);
   };
 
   pipewire = {
@@ -840,14 +831,13 @@ in rec {
     doc = ''
       Exposes pipewire to the jailed application.
     '';
-    __functor = _:
-      include-once "pipewire"
-      (compose [
+    __functor =
+      _:
+      include-once "pipewire" (compose [
         (fwd-env "XDG_RUNTIME_DIR")
         (unsafe-add-raw-args "--bind-try \"$XDG_RUNTIME_DIR/pipewire-0\" \"$XDG_RUNTIME_DIR/pipewire-0\"")
         (unsafe-add-raw-args "--bind-try /run/pipewire /run/pipewire")
-      ])
-    ;
+      ]);
   };
 
   gpu = {
@@ -855,15 +845,14 @@ in rec {
     doc = ''
       Exposes the gpu to jailed application.
     '';
-    __functor = _:
-      include-once "gpu"
-      (compose [
+    __functor =
+      _:
+      include-once "gpu" (compose [
         (runtime-deep-ro-bind (noescape "/run/opengl-driver"))
         (runtime-deep-ro-bind (noescape "/run/opengl-driver-32"))
         (readonly (noescape "/sys"))
         (unsafe-add-raw-args "--dev-bind /dev/dri /dev/dri")
-      ])
-    ;
+      ]);
   };
 
   time-zone = {
@@ -871,10 +860,7 @@ in rec {
     doc = ''
       Exposes your timezone.
     '';
-    __functor = _:
-      include-once "time-zone"
-      (runtime-deep-ro-bind "/etc/localtime")
-    ;
+    __functor = _: include-once "time-zone" (runtime-deep-ro-bind "/etc/localtime");
   };
 
   network = {
@@ -887,19 +873,21 @@ in rec {
       You can set your desired hostname with [set-hostname](#set-hostname). The
       default is `jail`.
     '';
-    __functor = _:
-      include-once "network"
-      (state: compose [
-        time-zone
-        (share-ns "net")
-        (runtime-deep-ro-bind "/etc/hosts")
-        (runtime-deep-ro-bind "/etc/nsswitch.conf")
-        (runtime-deep-ro-bind "/etc/resolv.conf")
-        (runtime-deep-ro-bind "/etc/ssl")
-        (write-text "/etc/hostname" "${state.hostname}\n")
-        (unsafe-add-raw-args "--hostname ${escape state.hostname}")
-      ] state)
-    ;
+    __functor =
+      _:
+      include-once "network" (
+        state:
+        compose [
+          time-zone
+          (share-ns "net")
+          (runtime-deep-ro-bind "/etc/hosts")
+          (runtime-deep-ro-bind "/etc/nsswitch.conf")
+          (runtime-deep-ro-bind "/etc/resolv.conf")
+          (runtime-deep-ro-bind "/etc/ssl")
+          (write-text "/etc/hostname" "${state.hostname}\n")
+          (unsafe-add-raw-args "--hostname ${escape state.hostname}")
+        ] state
+      );
   };
 
   dbus = {
@@ -926,47 +914,54 @@ in rec {
       }
       ```
     '';
-    __functor = _:
-      { own ? [], talk ? [], see ? [], call ? [], broadcast ? [] }:
-        let
-          proxy = jail "xdg-dbus-proxy" pkgs.xdg-dbus-proxy [
-            unsafe-dbus
-            (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
-          ];
+    __functor =
+      _:
+      {
+        own ? [ ],
+        talk ? [ ],
+        see ? [ ],
+        call ? [ ],
+        broadcast ? [ ],
+      }:
+      let
+        proxy = jail "xdg-dbus-proxy" pkgs.xdg-dbus-proxy [
+          unsafe-dbus
+          (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
+        ];
 
-          args = [ "--filter" ]
-            ++ map (id: "--own=${lib.escapeShellArg id}") own
-            ++ map (id: "--talk=${lib.escapeShellArg id}") talk
-            ++ map (id: "--see=${lib.escapeShellArg id}") see
-            ++ map (id: "--call=${lib.escapeShellArg id}") call
-            ++ map (id: "--broadcast=${lib.escapeShellArg id}") broadcast;
-        in
-          compose [
-            (add-runtime ''
-              PROXIED_DBUS_SOCKET_DIR=$(mktemp -d)
-              export PROXIED_DBUS_SOCKET_DIR
-              PROXIED_DBUS_SOCKET="$PROXIED_DBUS_SOCKET_DIR/socket"
-              mkfifo "$PROXIED_DBUS_SOCKET_DIR/ready"
-              exec {XDG_DBUS_PROXY_READY_FD}<>"$PROXIED_DBUS_SOCKET_DIR/ready"
-              ${lib.getExe proxy} \
-                "$DBUS_SESSION_BUS_ADDRESS" \
-                "$PROXIED_DBUS_SOCKET" \
-                --fd="$XDG_DBUS_PROXY_READY_FD" \
-                ${lib.concatStringsSep " " args} \
-                &
-              PROXY_PID=$!
-              IFS= read -rn1 -u "$XDG_DBUS_PROXY_READY_FD"
-            '')
-            (add-cleanup ''
-              kill "$PROXY_PID"
-              if [ -e "''${PROXIED_DBUS_SOCKET_DIR-}" ]; then
-                rm -rf "$PROXIED_DBUS_SOCKET_DIR"
-              fi
-            '')
-            (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
-            (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"unix:path=$PROXIED_DBUS_SOCKET\""))
-          ]
-    ;
+        args =
+          [ "--filter" ]
+          ++ map (id: "--own=${lib.escapeShellArg id}") own
+          ++ map (id: "--talk=${lib.escapeShellArg id}") talk
+          ++ map (id: "--see=${lib.escapeShellArg id}") see
+          ++ map (id: "--call=${lib.escapeShellArg id}") call
+          ++ map (id: "--broadcast=${lib.escapeShellArg id}") broadcast;
+      in
+      compose [
+        (add-runtime ''
+          PROXIED_DBUS_SOCKET_DIR=$(mktemp -d)
+          export PROXIED_DBUS_SOCKET_DIR
+          PROXIED_DBUS_SOCKET="$PROXIED_DBUS_SOCKET_DIR/socket"
+          mkfifo "$PROXIED_DBUS_SOCKET_DIR/ready"
+          exec {XDG_DBUS_PROXY_READY_FD}<>"$PROXIED_DBUS_SOCKET_DIR/ready"
+          ${lib.getExe proxy} \
+            "$DBUS_SESSION_BUS_ADDRESS" \
+            "$PROXIED_DBUS_SOCKET" \
+            --fd="$XDG_DBUS_PROXY_READY_FD" \
+            ${lib.concatStringsSep " " args} \
+            &
+          PROXY_PID=$!
+          IFS= read -rn1 -u "$XDG_DBUS_PROXY_READY_FD"
+        '')
+        (add-cleanup ''
+          kill "$PROXY_PID"
+          if [ -e "''${PROXIED_DBUS_SOCKET_DIR-}" ]; then
+            rm -rf "$PROXIED_DBUS_SOCKET_DIR"
+          fi
+        '')
+        (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
+        (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"unix:path=$PROXIED_DBUS_SOCKET\""))
+      ];
   };
 
   unsafe-dbus = {
@@ -978,12 +973,12 @@ in rec {
       more control over the messages that can be sent/received, consider using
       the [dbus](#dbus) combinator instead.
     '';
-    __functor = _:
+    __functor =
+      _:
       compose [
         (readonly (noescape "\"$XDG_RUNTIME_DIR/bus\""))
         (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"$DBUS_SESSION_BUS_ADDRESS\""))
-      ]
-    ;
+      ];
   };
 
   bind-pkg = {
@@ -996,12 +991,12 @@ in rec {
       bind-pkg "/foo" (pkgs.writeText "foo" "bar")
       ```
     '';
-    __functor = _:
-      path: pkg: compose [
+    __functor =
+      _: path: pkg:
+      compose [
         (ro-bind (toString pkg) path)
         (state: state // { additionalRuntimeClosures = state.additionalRuntimeClosures ++ [ pkg ]; })
-      ]
-    ;
+      ];
   };
 
   write-text = {
@@ -1015,12 +1010,11 @@ in rec {
       write-text "/hello.txt" "Hello, world!"
       ```
     '';
-    __functor = _:
-      path: contents:
-        bind-pkg
-          path
-          (pkgs.writeText "jail-write-text-${lib.strings.sanitizeDerivationName (escape path)}" contents)
-    ;
+    __functor =
+      _: path: contents:
+      bind-pkg path (
+        pkgs.writeText "jail-write-text-${lib.strings.sanitizeDerivationName (escape path)}" contents
+      );
   };
 
   persist-home = {
@@ -1034,12 +1028,12 @@ in rec {
 
       The home directory is persisted in `~/.local/share/jail.nix/home/<name>`.
     '';
-    __functor = _:
-      name: compose [
+    __functor =
+      _: name:
+      compose [
         (add-runtime "mkdir -p ${helpers.dataDirSubPath "home/${name}"}")
         (rw-bind (noescape (helpers.dataDirSubPath "home/${name}")) (noescape "~"))
-      ]
-    ;
+      ];
   };
 
   jail-to-host-channel = {
@@ -1079,47 +1073,57 @@ in rec {
       that returns the size of the file passed in without needing to
       give the jail read access to any files.
     '';
-    __functor = _:
-      jailTxName: hostRxHandler:
-        assert pkgs.lib.isValidPosixName jailTxName;
-        let varPrefix = "J2H_CHAN_${pkgs.lib.toUpper jailTxName}"; in
-        include-once "jail-to-host-channel-${jailTxName}"
-        (compose [
-          (add-runtime ''
-            # Set up jail-to-host channel "${jailTxName}"
-            ${varPrefix}_TMP=$(mktemp -d)
-            mkfifo "''$${varPrefix}_TMP/fifo"
-            (
-              while true; do
-                MSG=$(<"''$${varPrefix}_TMP/fifo")
-                ${pkgs.lib.getExe (pkgs.writeShellApplication {
-                  name = "${jailTxName}-host-rx-handler";
-                  text = hostRxHandler;
-                })} "$MSG" > "''$${varPrefix}_TMP/fifo" || break
-              done
-            ) &
-            ${varPrefix}_RX_PID=$!
-          '')
-          (add-cleanup ''
-            kill "''$${varPrefix}_RX_PID"
-            rm -rf "''$${varPrefix}_TMP"
-          '')
-          (ro-bind (noescape "\"\$${varPrefix}_TMP/fifo\"") "/run/j2hc-${jailTxName}")
-          (add-pkg-deps [(pkgs.writeShellApplication {
+    __functor =
+      _: jailTxName: hostRxHandler:
+      assert pkgs.lib.isValidPosixName jailTxName;
+      let
+        varPrefix = "J2H_CHAN_${pkgs.lib.toUpper jailTxName}";
+      in
+      include-once "jail-to-host-channel-${jailTxName}" (compose [
+        (add-runtime ''
+          # Set up jail-to-host channel "${jailTxName}"
+          ${varPrefix}_TMP=$(mktemp -d)
+          mkfifo "''$${varPrefix}_TMP/fifo"
+          (
+            while true; do
+              MSG=$(<"''$${varPrefix}_TMP/fifo")
+              ${
+                pkgs.lib.getExe (
+                  pkgs.writeShellApplication {
+                    name = "${jailTxName}-host-rx-handler";
+                    text = hostRxHandler;
+                  }
+                )
+              } "$MSG" > "''$${varPrefix}_TMP/fifo" || break
+            done
+          ) &
+          ${varPrefix}_RX_PID=$!
+        '')
+        (add-cleanup ''
+          kill "''$${varPrefix}_RX_PID"
+          rm -rf "''$${varPrefix}_TMP"
+        '')
+        (ro-bind (noescape "\"\$${varPrefix}_TMP/fifo\"") "/run/j2hc-${jailTxName}")
+        (add-pkg-deps [
+          (pkgs.writeShellApplication {
             name = jailTxName;
             runtimeInputs = [ pkgs.util-linux ];
             text = ''
-              flock /run/j2hc.lock ${pkgs.lib.getExe (pkgs.writeShellApplication {
-                name = "${jailTxName}-locked";
-                text = ''
-                  echo "$1" > /run/j2hc-${jailTxName}
-                  echo "$(< /run/j2hc-${jailTxName})"
-                '';
-              })} "$1"
+              flock /run/j2hc.lock ${
+                pkgs.lib.getExe (
+                  pkgs.writeShellApplication {
+                    name = "${jailTxName}-locked";
+                    text = ''
+                      echo "$1" > /run/j2hc-${jailTxName}
+                      echo "$(< /run/j2hc-${jailTxName})"
+                    '';
+                  }
+                )
+              } "$1"
             '';
-          })])
+          })
         ])
-    ;
+      ]);
   };
 
   open-urls-in-browser = {
@@ -1132,12 +1136,12 @@ in rec {
       program can launch your browser, even if it has a subset of the
       permissions your browser has.
     '';
-    __functor = _:
+    __functor =
+      _:
       compose [
         (jail-to-host-channel "browserchannel" ''"$BROWSER" "$1"'')
         (set-env "BROWSER" "browserchannel")
-      ]
-    ;
+      ];
   };
 
   ############################################
@@ -1146,22 +1150,20 @@ in rec {
     deprecated = true;
     sig = "Permission";
     doc = "This was reworked to store data under `~/.local/share/jail.nix` and renamed to [persist-home](#persist-home).";
-    __functor = _:
-      name:
-        lib.warn "persisthome is deprecated, use persist-home instead. When doing so, rename ~/.local/share/jails/${name} to ${helpers.dataDirSubPath "home/${name}"}"
+    __functor =
+      _: name:
+      lib.warn
+        "persisthome is deprecated, use persist-home instead. When doing so, rename ~/.local/share/jails/${name} to ${helpers.dataDirSubPath "home/${name}"}"
         (compose [
           (add-runtime "mkdir -p ~/.local/share/jails/${lib.escapeShellArg name}")
           (rw-bind (noescape "~/.local/share/jails/${lib.escapeShellArg name}") (noescape "~"))
-        ])
-    ;
+        ]);
   };
 
   dbus-unsafe = {
     deprecated = true;
     sig = "Permission";
     doc = "This was renamed to [unsafe-dbus](#unsafe-dbus).";
-    __functor = _:
-      lib.warn "dbus-unsafe is deprecated, use unsafe-dbus instead"
-      unsafe-dbus;
+    __functor = _: lib.warn "dbus-unsafe is deprecated, use unsafe-dbus instead" unsafe-dbus;
   };
 }
