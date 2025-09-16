@@ -2,6 +2,7 @@ image: nixos/25.05
 environment:
   NIX_CONFIG: "experimental-features = nix-command flakes"
 tasks:
+  - setup: "sudo ln -s /etc/zoneinfo/EST /etc/localtime"
   - test-jail-nix: "cd jail.nix/tests && nix run .#runTests"
   - check-format: "cd jail.nix/tests && nix run .#checkFmt"
   - build-website: "cd jail.nix/website && nix build -L .#default"

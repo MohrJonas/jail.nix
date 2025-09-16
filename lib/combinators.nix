@@ -860,7 +860,12 @@ rec {
     doc = ''
       Exposes your timezone.
     '';
-    __functor = _: include-once "time-zone" (runtime-deep-ro-bind "/etc/localtime");
+    __functor =
+      _:
+      include-once "time-zone" (compose [
+        (unsafe-add-raw-args "--ro-bind \"$(realpath /etc/localtime)\" \"$(readlink /etc/localtime)\"")
+        (unsafe-add-raw-args "--symlink \"$(readlink /etc/localtime)\" /etc/localtime")
+      ]);
   };
 
   network = {

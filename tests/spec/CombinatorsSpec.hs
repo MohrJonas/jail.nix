@@ -194,3 +194,47 @@ spec = parallel $ inTestM $ do
         ])
       |]
         `shouldOutput` "some-value"
+
+  describe "time-zone" $ do
+    it "forwards timezones on nixos systems" $ do
+      [i|
+        let
+          tz = "EST";
+          fakeEtc = pkgs.runCommand "fake-etc" {} ''
+            mkdir -p $out/etc
+            ln -s ${pkgs.tzdata}/share/zoneinfo $out/etc/zoneinfo
+          '';
+          withFakeTimeZoneOnNixos = program:
+            jail program.name program (c: [
+              # This is a bit convoluted, but this recreates the symlink chain that is present on nixos systems
+              (c.add-pkg-deps [ fakeEtc ])
+              (c.unsafe-add-raw-args "--symlink ${fakeEtc}/etc /etc/static")
+              (c.unsafe-add-raw-args "--symlink /etc/static/zoneinfo /etc/zoneinfo")
+              (c.unsafe-add-raw-args "--symlink /etc/zoneinfo/${tz} /etc/localtime")
+            ]);
+        in
+          withFakeTimeZoneOnNixos (
+            jail "print-time-zone" (sh "date '+%Z'") (c: [
+              c.time-zone
+            ])
+          )
+      |]
+        `shouldOutput` "EST\n"
+
+    it "forwards timezones on non-nixos systems" $ do
+      [i|
+        let
+          tz = "EST";
+          withFakeTimeZoneOnNixos = program:
+            jail program.name program (c: [
+              (c.unsafe-add-raw-args "--ro-bind ${pkgs.tzdata}/share/zoneinfo /etc/zoneinfo")
+              (c.unsafe-add-raw-args "--symlink /etc/zoneinfo/${tz} /etc/localtime")
+            ]);
+        in
+          withFakeTimeZoneOnNixos (
+            jail "print-time-zone" (sh "date '+%Z'") (c: [
+              c.time-zone
+            ])
+          )
+      |]
+        `shouldOutput` "EST\n"
