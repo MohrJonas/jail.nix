@@ -1132,7 +1132,7 @@ rec {
   };
 
   open-urls-in-browser = {
-    sig = "Combinator";
+    sig = "Permission";
     doc = ''
       Allows access to open URLs in `$BROWSER`.
 
