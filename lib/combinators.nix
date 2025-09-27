@@ -525,6 +525,9 @@ rec {
     sig = "String -> Permission";
     doc = ''
       Binds the specified path in the jail as read-only.
+
+      This will error if the file does not exist. If you want to be tolerant of
+      missing files, see [try-readonly](#try-readonly).
     '';
     __functor = _: path: ro-bind path path;
   };
@@ -533,6 +536,9 @@ rec {
     sig = "String -> Permission";
     doc = ''
       Binds the specified path in the jail as read-write.
+
+      This will error if the file does not exist. If you want to be tolerant of
+      missing files, see [try-readwrite](#try-readwrite).
     '';
     __functor = _: path: rw-bind path path;
   };
@@ -541,6 +547,9 @@ rec {
     sig = "String -> String -> Permission";
     doc = ''
       Binds the specified path on the host to a path in the jail as read-only.
+
+      This will error if the host file does not exist. If you want to be
+      tolerant of missing files, see [try-ro-bind](#try-ro-bind).
 
       Example:
       ```nix
@@ -558,6 +567,9 @@ rec {
     doc = ''
       Binds the specified path on the host to a path in the jail as read-write.
 
+      This will error if the host file does not exist. If you want to be
+      tolerant of missing files, see [try-rw-bind](#try-rw-bind).
+
       Example:
       ```nix
       # Binds /foo on the host to /bar in the jail
@@ -567,6 +579,56 @@ rec {
     __functor =
       _: from: to:
       unsafe-add-raw-args "--bind ${escape from} ${escape to}";
+  };
+
+  try-readonly = {
+    sig = "String -> Permission";
+    doc = ''
+      Binds the specified path in the jail as read-only if it exists.
+    '';
+    __functor = _: path: try-ro-bind path path;
+  };
+
+  try-readwrite = {
+    sig = "String -> Permission";
+    doc = ''
+      Binds the specified path in the jail as read-write if it exists.
+    '';
+    __functor = _: path: try-rw-bind path path;
+  };
+
+  try-ro-bind = {
+    sig = "String -> String -> Permission";
+    doc = ''
+      Binds the specified path on the host to a path in the jail as read-only
+      if it exists.
+
+      Example:
+      ```nix
+      # Binds /foo on the host to /bar in the jail if /foo exists
+      try-ro-bind "/foo" "/bar"
+      ```
+    '';
+    __functor =
+      _: from: to:
+      unsafe-add-raw-args "--ro-bind-try ${escape from} ${escape to}";
+  };
+
+  try-rw-bind = {
+    sig = "String -> String -> Permission";
+    doc = ''
+      Binds the specified path on the host to a path in the jail as read-write
+      if it exists.
+
+      Example:
+      ```nix
+      # Binds /foo on the host to /bar in the jail if /foo exists
+      try-rw-bind "/foo" "/bar"
+      ```
+    '';
+    __functor =
+      _: from: to:
+      unsafe-add-raw-args "--bind-try ${escape from} ${escape to}";
   };
 
   readonly-runtime-args = {

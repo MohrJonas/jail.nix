@@ -238,3 +238,111 @@ spec = parallel $ inTestM $ do
           )
       |]
         `shouldOutput` "EST\n"
+
+  describe "try-readonly" $ do
+    it "binds paths as readonly in the jail" $ do
+      tmpDir <- getTestDir
+      liftIO $ writeFile (tmpDir </> "my-file") "foo"
+      [i|
+        jail "test" (sh ''cat "#{tmpDir </> "my-file"}"'') (c: [
+          (c.try-readonly "#{tmpDir </> "my-file"}")
+        ])
+      |]
+        `shouldOutput` "foo"
+      out <-
+        runNixDrv
+          [i|
+            jail "test" (sh ''echo new-contents | tee "#{tmpDir </> "my-file"}" 2>&1 || true'') (c: [
+              (c.try-readonly "#{tmpDir </> "my-file"}")
+            ])
+          |]
+      liftIO $ out `shouldContain` "my-file: Read-only file system"
+
+    it "does not error if the file does not exist" $ do
+      [i|
+        jail "test" (sh ''echo ok'') (c: [
+          (c.try-readonly "/this/path/does/not/exist")
+        ])
+      |]
+        `shouldOutput` "ok\n"
+
+  describe "try-readwrite" $ do
+    it "binds paths as readwrite in the jail" $ do
+      tmpDir <- getTestDir
+      liftIO $ writeFile (tmpDir </> "my-file") "foo"
+      [i|
+        jail "test" (sh ''cat "#{tmpDir </> "my-file"}"'') (c: [
+          (c.try-readwrite "#{tmpDir </> "my-file"}")
+        ])
+      |]
+        `shouldOutput` "foo"
+      void $
+        runNixDrv
+          [i|
+            jail "test" (sh ''echo new-contents | tee "#{tmpDir </> "my-file"}"'') (c: [
+              (c.try-readwrite "#{tmpDir </> "my-file"}")
+            ])
+          |]
+      liftIO $ readFile (tmpDir </> "my-file") `shouldReturn` "new-contents\n"
+
+    it "does not error if the file does not exist" $ do
+      [i|
+        jail "test" (sh ''echo ok'') (c: [
+          (c.try-readwrite "/this/path/does/not/exist")
+        ])
+      |]
+        `shouldOutput` "ok\n"
+
+  describe "try-ro-bind" $ do
+    it "binds paths as readonly in the jail" $ do
+      tmpDir <- getTestDir
+      liftIO $ writeFile (tmpDir </> "my-file") "foo"
+      [i|
+        jail "test" (sh ''cat /path/in/jail'') (c: [
+          (c.try-ro-bind "#{tmpDir </> "my-file"}" "/path/in/jail")
+        ])
+      |]
+        `shouldOutput` "foo"
+      out <-
+        runNixDrv
+          [i|
+            jail "test" (sh ''echo new-contents | tee /path/in/jail 2>&1 || true'') (c: [
+              (c.try-ro-bind "#{tmpDir </> "my-file"}" "/path/in/jail")
+            ])
+          |]
+      liftIO $ out `shouldContain` "/path/in/jail: Read-only file system"
+
+    it "does not error if the file does not exist" $ do
+      [i|
+        jail "test" (sh ''echo ok'') (c: [
+          (c.try-ro-bind "/this/path/does/not/exist" "/path/in/jail")
+        ])
+      |]
+        `shouldOutput` "ok\n"
+
+  describe "try-rw-bind" $ do
+    it "binds paths as readwrite in the jail" $ do
+      tmpDir <- getTestDir
+      liftIO $ writeFile (tmpDir </> "my-file") "foo"
+      [i|
+        jail "test" (sh ''cat /path/in/jail'') (c: [
+          (c.try-rw-bind "#{tmpDir </> "my-file"}" "/path/in/jail")
+        ])
+      |]
+        `shouldOutput` "foo"
+      void $
+        runNixDrv
+          [i|
+            jail "test" (sh ''echo new-contents | tee /path/in/jail'') (c: [
+              (c.try-rw-bind "#{tmpDir </> "my-file"}" "/path/in/jail")
+            ])
+          |]
+      liftIO $ readFile (tmpDir </> "my-file") `shouldReturn` "new-contents\n"
+
+    it "does not error if the file does not exist" $ do
+      [i|
+        jail "test" (sh ''echo ok'') (c: [
+          (c.try-rw-bind "/this/path/does/not/exist" "/path/in/jail")
+        ])
+      |]
+        `shouldOutput` "ok\n"
