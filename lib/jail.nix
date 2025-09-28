@@ -43,6 +43,7 @@ let
         cleanup = [ ]; # See cleanup combinator
         deferredPermissions = [ ]; # See defer combinator
         additionalRuntimeClosures = [ ]; # See bind-nix-store-runtime-closure
+        dbusPermissions = [ ]; # See dbus combinator
       };
     in
     lib.pipe initialState (

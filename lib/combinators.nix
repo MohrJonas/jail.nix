@@ -980,6 +980,11 @@ rec {
         ];
       }
       ```
+
+      Multiple calls to `dbus` will only run a single xdg-dbus-proxy with a
+      union of all passed own/talk/see/call/broadcast permissions. This makes
+      it possible to write wrapper combinators for specific dbus permissions
+      and use them in conjunction with each other.
     '';
     __functor =
       _:
@@ -990,44 +995,79 @@ rec {
         call ? [ ],
         broadcast ? [ ],
       }:
-      let
-        proxy = jail "xdg-dbus-proxy" pkgs.xdg-dbus-proxy [
-          unsafe-dbus
-          (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
-        ];
-
-        args =
-          [ "--filter" ]
-          ++ map (id: "--own=${lib.escapeShellArg id}") own
-          ++ map (id: "--talk=${lib.escapeShellArg id}") talk
-          ++ map (id: "--see=${lib.escapeShellArg id}") see
-          ++ map (id: "--call=${lib.escapeShellArg id}") call
-          ++ map (id: "--broadcast=${lib.escapeShellArg id}") broadcast;
-      in
       compose [
-        (add-runtime ''
-          PROXIED_DBUS_SOCKET_DIR=$(mktemp -d)
-          export PROXIED_DBUS_SOCKET_DIR
-          PROXIED_DBUS_SOCKET="$PROXIED_DBUS_SOCKET_DIR/socket"
-          mkfifo "$PROXIED_DBUS_SOCKET_DIR/ready"
-          exec {XDG_DBUS_PROXY_READY_FD}<>"$PROXIED_DBUS_SOCKET_DIR/ready"
-          ${lib.getExe proxy} \
-            "$DBUS_SESSION_BUS_ADDRESS" \
-            "$PROXIED_DBUS_SOCKET" \
-            --fd="$XDG_DBUS_PROXY_READY_FD" \
-            ${lib.concatStringsSep " " args} \
-            &
-          PROXY_PID=$!
-          IFS= read -rn1 -u "$XDG_DBUS_PROXY_READY_FD"
-        '')
-        (add-cleanup ''
-          kill "$PROXY_PID"
-          if [ -e "''${PROXIED_DBUS_SOCKET_DIR-}" ]; then
-            rm -rf "$PROXIED_DBUS_SOCKET_DIR"
-          fi
-        '')
-        (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
-        (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"unix:path=$PROXIED_DBUS_SOCKET\""))
+        # Just set the options on state so dbus can be called multiple times
+        (
+          state:
+          state
+          // {
+            dbusPermissions = state.dbusPermissions ++ [
+              {
+                inherit
+                  own
+                  talk
+                  see
+                  call
+                  broadcast
+                  ;
+              }
+            ];
+          }
+        )
+        # Then add deferred runtime logic to spin up xdg-dbus-proxy:
+        (include-once "dbus" (
+          defer (
+            state:
+            let
+              proxy = jail "xdg-dbus-proxy" pkgs.xdg-dbus-proxy [
+                unsafe-dbus
+                (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
+              ];
+
+              getFlags =
+                type:
+                lib.pipe state.dbusPermissions [
+                  (map (p: p.${type}))
+                  lib.flatten
+                  lib.unique
+                  (map (id: "--${type}=${lib.escapeShellArg id}"))
+                ];
+
+              args =
+                [ "--filter" ]
+                ++ getFlags "own"
+                ++ getFlags "talk"
+                ++ getFlags "see"
+                ++ getFlags "call"
+                ++ getFlags "broadcast";
+            in
+            compose [
+              (add-runtime ''
+                PROXIED_DBUS_SOCKET_DIR=$(mktemp -d)
+                export PROXIED_DBUS_SOCKET_DIR
+                PROXIED_DBUS_SOCKET="$PROXIED_DBUS_SOCKET_DIR/socket"
+                mkfifo "$PROXIED_DBUS_SOCKET_DIR/ready"
+                exec {XDG_DBUS_PROXY_READY_FD}<>"$PROXIED_DBUS_SOCKET_DIR/ready"
+                ${lib.getExe proxy} \
+                  "$DBUS_SESSION_BUS_ADDRESS" \
+                  "$PROXIED_DBUS_SOCKET" \
+                  --fd="$XDG_DBUS_PROXY_READY_FD" \
+                  ${lib.concatStringsSep " " args} \
+                  &
+                PROXY_PID=$!
+                IFS= read -rn1 -u "$XDG_DBUS_PROXY_READY_FD"
+              '')
+              (add-cleanup ''
+                kill "$PROXY_PID"
+                if [ -e "''${PROXIED_DBUS_SOCKET_DIR-}" ]; then
+                  rm -rf "$PROXIED_DBUS_SOCKET_DIR"
+                fi
+              '')
+              (readwrite (noescape "\"$PROXIED_DBUS_SOCKET_DIR\""))
+              (set-env "DBUS_SESSION_BUS_ADDRESS" (noescape "\"unix:path=$PROXIED_DBUS_SOCKET\""))
+            ] state
+          )
+        ))
       ];
   };
 

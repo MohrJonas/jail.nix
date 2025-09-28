@@ -145,6 +145,41 @@ spec = inTestM $ do
           sendDBusOutput `shouldBe` "Failed to call dbus method\n"
           methodCalls `shouldBe` []
 
+    describe "multiple calls to the dbus combinator" $ do
+      it "exposes a union of all of the specified permissions" $ do
+        let mockMethod1 =
+              MockDBusMethod
+                { objPath = "/foo/object1",
+                  ifaceName = "foo.iface1.Iface",
+                  methodName = "method1"
+                }
+        let mockMethod2 =
+              MockDBusMethod
+                { objPath = "/foo/object2",
+                  ifaceName = "foo.iface2.Iface",
+                  methodName = "method2"
+                }
+        ((sendDBusOutput, method2Calls), method1Calls) <- withDBusClient $ \mockBusName client -> do
+          withMockDBusMethodHandler client mockMethod1 "return value 1" $ do
+            withMockDBusMethodHandler client mockMethod2 "return value 2" $ do
+              runNixDrv
+                [i|
+                  jail
+                    "send-multiple"
+                    (sh ''
+                      ${lib.getExe (#{callDBusMethodNixDrv mockBusName mockMethod1 "arg1"})}
+                      ${lib.getExe (#{callDBusMethodNixDrv mockBusName mockMethod2 "arg2"})}
+                    '')
+                    (c: [
+                      (c.dbus { call = [ #{toNixString $ toProxyRule mockBusName mockMethod1} ]; })
+                      (c.dbus { call = [ #{toNixString $ toProxyRule mockBusName mockMethod2} ]; })
+                    ])
+                |]
+        liftIO $ do
+          sendDBusOutput `shouldBe` "   return value 1   return value 2"
+          method1Calls `shouldBe` ["arg1"]
+          method2Calls `shouldBe` ["arg2"]
+
 -- * DBus test helpers
 
 withDBusClient :: (DBus.BusName -> DBus.Client -> TestM a) -> TestM a
