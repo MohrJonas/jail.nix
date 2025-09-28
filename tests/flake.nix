@@ -7,9 +7,10 @@
     let
       pkgs = import nixpkgs { system = "x86_64-linux"; };
       lib = pkgs.lib;
-      haskellPackages = pkgs.haskellPackages.callCabal2nix "jail-nix-tests" ./. { };
+      haskellPackages = pkgs.haskell.packages.ghc984;
+      cabal2nix = haskellPackages.callCabal2nix "jail-nix-tests" ./. { };
       testDependencies = [
-        (pkgs.haskellPackages.ghc.withPackages (p: haskellPackages.buildInputs))
+        (haskellPackages.ghc.withPackages (p: cabal2nix.buildInputs))
         pkgs.cabal-install
       ];
       mkApp = name: runtimeInputs: script: {
@@ -44,7 +45,7 @@
 
       devShells.x86_64-linux.default = pkgs.mkShell {
         buildInputs = testDependencies ++ [
-          (pkgs.haskell-language-server.override { dynamic = true; })
+          haskellPackages.haskell-language-server
           pkgs.ghcid
           pkgs.hpack
         ];
