@@ -119,9 +119,7 @@ rec {
       ])
       ```
     '';
-    __functor =
-      _: combinator: state:
-      state // { deferredPermissions = state.deferredPermissions ++ [ combinator ]; };
+    __functor = _: helpers.pushState "deferredPermissions";
   };
 
   include-once = {
@@ -165,7 +163,7 @@ rec {
       if lib.elem key state.includedOnce then
         state
       else
-        combinator (state // { includedOnce = state.includedOnce ++ [ key ]; });
+        combinator (helpers.pushState "includedOnce" key state);
   };
 
   unsafe-add-raw-args = {
@@ -265,9 +263,7 @@ rec {
       ]
       ```
     '';
-    __functor =
-      _: cleanup: state:
-      state // { cleanup = state.cleanup ++ [ cleanup ]; };
+    __functor = _: helpers.pushState "cleanup";
   };
 
   fake-passwd = {
@@ -997,23 +993,15 @@ rec {
       }:
       compose [
         # Just set the options on state so dbus can be called multiple times
-        (
-          state:
-          state
-          // {
-            dbusPermissions = state.dbusPermissions ++ [
-              {
-                inherit
-                  own
-                  talk
-                  see
-                  call
-                  broadcast
-                  ;
-              }
-            ];
-          }
-        )
+        (helpers.pushState "dbusPermissions" {
+          inherit
+            own
+            talk
+            see
+            call
+            broadcast
+            ;
+        })
         # Then add deferred runtime logic to spin up xdg-dbus-proxy:
         (include-once "dbus" (
           defer (
@@ -1102,7 +1090,7 @@ rec {
       _: path: pkg:
       compose [
         (ro-bind (toString pkg) path)
-        (state: state // { additionalRuntimeClosures = state.additionalRuntimeClosures ++ [ pkg ]; })
+        (helpers.pushState "additionalRuntimeClosures" pkg)
       ];
   };
 

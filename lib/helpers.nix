@@ -11,4 +11,8 @@ pkgs: rec {
       rawOrStr._noescape
     else
       pkgs.lib.strings.escapeShellArg rawOrStr;
+
+  pushState =
+    key: toPush: state:
+    state // { ${key} = state.${key} ++ [ toPush ]; };
 }
