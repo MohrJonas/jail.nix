@@ -73,7 +73,6 @@ inTestM = aroundWith $ \action () -> do
           (\(name, getVal) -> ((name,) <$>) <$> getVal)
           [ ("HOME", lookupEnv "HOME"),
             ("LANG", pure $ Just "en_US.UTF-8"),
-            ("PATH", lookupEnv "PATH"),
             ("DBUS_SESSION_BUS_ADDRESS", lookupEnv "DBUS_SESSION_BUS_ADDRESS"),
             ("XDG_RUNTIME_DIR", lookupEnv "XDG_RUNTIME_DIR")
           ]

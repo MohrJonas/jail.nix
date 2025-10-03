@@ -103,7 +103,13 @@ let
             if builtins.length state.cleanup > 0 then "" else "exec "
           }${state.cmd} "''${RUNTIME_ARGS[@]}" -- ${state.entry} ${state.argv}
         '')
-        (text: pkgs.writeShellApplication { inherit name text; })
+        (
+          text:
+          pkgs.writeShellApplication {
+            inherit name text;
+            runtimeInputs = [ pkgs.coreutils ];
+          }
+        )
 
         # forward man pages
         (jailed: if exe ? man then jailed // { inherit (exe) man; } else jailed)
