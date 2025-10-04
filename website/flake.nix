@@ -112,7 +112,21 @@
         ];
       };
     in
-    {
+    rec {
+      apps.x86_64-linux.serve = {
+        type = "app";
+        program = lib.getExe (
+          pkgs.writeShellApplication {
+            name = "serve";
+            runtimeInputs = [ pkgs.python3 ];
+            text = ''
+              cd ${packages.x86_64-linux.default}
+              python3 -m http.server
+            '';
+          }
+        );
+      };
+
       packages.x86_64-linux.default = pkgs.runCommand "website" { buildInputs = [ pkgs.mkdocs ]; } ''
         cp -r ${./static-docs} docs
         chmod -R +w docs
