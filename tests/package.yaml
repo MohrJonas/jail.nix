@@ -19,6 +19,7 @@ tests:
       - random
       - string-conversions
       - temporary
+      - text
 
 default-extensions:
   - DerivingStrategies

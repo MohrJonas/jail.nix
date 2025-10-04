@@ -4,6 +4,9 @@ import Control.Concurrent (modifyMVar_, newMVar, readMVar)
 import Control.Exception (bracket)
 import DBus qualified
 import DBus.Client qualified as DBus
+import DBus.Internal.Types qualified as DBus
+import Data.Int (Int32)
+import Data.Text
 import System.Random
 import Test.Hspec
 import TestPrelude
@@ -19,7 +22,8 @@ spec = inTestM $ do
 
   describe "unsafe-dbus" $ do
     it "gives unfiltered access to DBus method calls" $ do
-      (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
+      mockBusName <- mkMockBusName
+      (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
         withMockDBusMethodHandler client mockMethod "some return value" $ do
           runNixDrv
             [i|
@@ -32,7 +36,8 @@ spec = inTestM $ do
         methodCalls `shouldBe` ["some arg"]
 
     it "gives unfiltered access to DBus signals" $ do
-      (_, signals) <- withDBusClient $ \mockBusName client -> do
+      mockBusName <- mkMockBusName
+      (_, signals) <- withDBusClient mockBusName $ \client -> do
         withMockDBusSignalHandler client mockMethod $ do
           runNixDrv
             [i|
@@ -45,7 +50,8 @@ spec = inTestM $ do
   describe "dbus" $ do
     describe "sending signals from within the jail" $ do
       it "filters all signals if there are no rules" $ do
-        (_, signals) <- withDBusClient $ \mockBusName client -> do
+        mockBusName <- mkMockBusName
+        (_, signals) <- withDBusClient mockBusName $ \client -> do
           withMockDBusSignalHandler client mockMethod $ do
             runNixDrv
               [i|
@@ -57,7 +63,8 @@ spec = inTestM $ do
 
     describe "calling methods from within the jail" $ do
       it "allows method calls that match the call filter rules" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
+        mockBusName <- mkMockBusName
+        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -72,7 +79,8 @@ spec = inTestM $ do
           methodCalls `shouldBe` ["some arg"]
 
       it "allows method calls if the receiving bus has `own` privileges" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
+        mockBusName <- mkMockBusName
+        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -87,7 +95,8 @@ spec = inTestM $ do
           methodCalls `shouldBe` ["some arg"]
 
       it "allows method calls if the receiving bus has `talk` privileges" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
+        mockBusName <- mkMockBusName
+        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -102,7 +111,8 @@ spec = inTestM $ do
           methodCalls `shouldBe` ["some arg"]
 
       it "filters method calls if the receiving bus only has `see` privileges" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
+        mockBusName <- mkMockBusName
+        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -117,7 +127,8 @@ spec = inTestM $ do
           methodCalls `shouldBe` []
 
       it "filters all method calls if there are no rules" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
+        mockBusName <- mkMockBusName
+        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             runNixDrv
               [i|
@@ -130,7 +141,8 @@ spec = inTestM $ do
           methodCalls `shouldBe` []
 
       it "filters method calls if the rules do not match" $ do
-        (sendDBusOutput, methodCalls) <- withDBusClient $ \mockBusName client -> do
+        mockBusName <- mkMockBusName
+        (sendDBusOutput, methodCalls) <- withDBusClient mockBusName $ \client -> do
           withMockDBusMethodHandler client mockMethod "some return value" $ do
             let otherMockMethod = mockMethod {objPath = "/some/unrelated/object/path"}
             runNixDrv
@@ -159,7 +171,8 @@ spec = inTestM $ do
                   ifaceName = "foo.iface2.Iface",
                   methodName = "method2"
                 }
-        ((sendDBusOutput, method2Calls), method1Calls) <- withDBusClient $ \mockBusName client -> do
+        mockBusName <- mkMockBusName
+        ((sendDBusOutput, method2Calls), method1Calls) <- withDBusClient mockBusName $ \client -> do
           withMockDBusMethodHandler client mockMethod1 "return value 1" $ do
             withMockDBusMethodHandler client mockMethod2 "return value 2" $ do
               runNixDrv
@@ -180,18 +193,33 @@ spec = inTestM $ do
           method1Calls `shouldBe` ["arg1"]
           method2Calls `shouldBe` ["arg2"]
 
+  describe "high-level dbus combinators" $ do
+    describe "notifications" $ do
+      it "allows software to emit notifications" $ do
+        notifications <- withDBusNotificationClient $ do
+          runNixDrv
+            [i|
+              jail "notify" (sh "${pkgs.libnotify}/bin/notify-send 'hello' 'some body'") (c: [
+                c.notifications
+              ])
+            |]
+        liftIO $ notifications `shouldBe` [("hello", "some body")]
+
 -- * DBus test helpers
 
-withDBusClient :: (DBus.BusName -> DBus.Client -> TestM a) -> TestM a
-withDBusClient action = do
+mkMockBusName :: TestM DBus.BusName
+mkMockBusName = do
   rand :: Int <- liftIO randomIO
-  mockBusName <- liftIO $ DBus.parseBusName $ "id.alexdav.jailnix.test" <> show rand
+  liftIO $ DBus.parseBusName $ "id.alexdav.jailnix.test" <> show rand
+
+withDBusClient :: DBus.BusName -> (DBus.Client -> TestM a) -> TestM a
+withDBusClient busName action = do
   let setup = do
         client <- liftIO DBus.connectSession
-        DBus.requestName client mockBusName [DBus.nameDoNotQueue] >>= \case
+        DBus.requestName client busName [DBus.nameDoNotQueue] >>= \case
           DBus.NamePrimaryOwner -> pure client
           reply -> error $ "Got unexpected requestName reply: " <> show reply
-  lifted (bracket setup DBus.disconnect) $ action mockBusName
+  lifted (bracket setup DBus.disconnect) action
 
 data MockDBusMethod = MockDBusMethod
   { objPath :: DBus.ObjectPath,
@@ -281,3 +309,61 @@ sendDBusSignalNixDrv busName (MockDBusMethod {objPath, ifaceName}) msg = do
   where
     toNixShellArg :: String -> String
     toNixShellArg s = "${lib.escapeShellArg " <> toNixString s <> "}"
+
+-- Implements a dummy org.freedsktop.Notifications server DBus client and
+-- returns a list of notifications it received
+withDBusNotificationClient :: TestM a -> TestM [(String, String)]
+withDBusNotificationClient action = do
+  withDBusClient "org.freedesktop.Notifications" $ \client -> do
+    receivedNotifications <- liftIO $ newMVar []
+    liftIO $
+      DBus.export client "/org/freedesktop/Notifications" $
+        DBus.defaultInterface
+          { -- https://specifications.freedesktop.org/notification-spec/1.3/protocol.html
+            DBus.interfaceName = "org.freedesktop.Notifications",
+            DBus.interfaceMethods =
+              [ DBus.autoMethod "GetCapabilities" (pure ["body"] :: IO [String]),
+                DBus.autoMethod "CloseNotification" (\(_id :: Int32) -> pure () :: IO ()),
+                DBus.autoMethod
+                  "GetServerInformation"
+                  ( pure
+                      ( "jailnixtestserver",
+                        "https://git.sr.ht/~alexdavid/jail.nix",
+                        "0.0.1",
+                        "1"
+                      ) ::
+                      IO (String, String, String, String)
+                  ),
+                DBus.Method
+                  { DBus.methodName = "Notify",
+                    DBus.inSignature =
+                      DBus.signature_
+                        [ DBus.TypeString,
+                          DBus.TypeWord32,
+                          DBus.TypeString,
+                          DBus.TypeString,
+                          DBus.TypeString,
+                          DBus.TypeArray DBus.TypeString,
+                          DBus.TypeDictionary DBus.TypeString DBus.TypeVariant,
+                          DBus.TypeInt32
+                        ],
+                    DBus.outSignature = DBus.signature_ [DBus.TypeInt32],
+                    DBus.methodHandler = \methodCall -> do
+                      let notification = case DBus.methodCallBody methodCall of
+                            [ _appName,
+                              _replacesId,
+                              _appIcon,
+                              DBus.Variant (DBus.ValueAtom (DBus.AtomText summary)),
+                              DBus.Variant (DBus.ValueAtom (DBus.AtomText body)),
+                              _actions,
+                              _hints,
+                              _expireTimeout
+                              ] -> (unpack summary, unpack body)
+                            _ -> error "unreachable: should be exactly 8 arguments"
+                      liftIO $ modifyMVar_ receivedNotifications $ pure . (<> [notification])
+                      pure $ DBus.ReplyReturn [DBus.Variant $ DBus.ValueAtom $ DBus.AtomWord32 123]
+                  }
+              ]
+          }
+    void action
+    liftIO $ readMVar receivedNotifications

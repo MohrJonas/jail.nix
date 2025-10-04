@@ -39,6 +39,7 @@ let
         network = ./combinators/network.nix;
         no-new-session = ./combinators/no-new-session.nix;
         noescape = ./combinators/noescape.nix;
+        notifications = ./combinators/notifications.nix;
         open-urls-in-browser = ./combinators/open-urls-in-browser.nix;
         persist-home = ./combinators/persist-home.nix;
         pipewire = ./combinators/pipewire.nix;
