@@ -7,7 +7,7 @@
 let
   inherit (pkgs) lib;
 
-  builtinCombinators = import ./combinators.nix pkgs jail;
+  builtinCombinators = (import ./combinators.nix pkgs jail).combinators;
 
   allCombinators = builtinCombinators // additionalCombinators builtinCombinators;
 

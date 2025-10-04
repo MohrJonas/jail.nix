@@ -22,7 +22,7 @@
       formatCombinatorDoc =
         name: combinatorObj:
         let
-          attrPos = builtins.unsafeGetAttrPos "__functor" combinatorObj;
+          attrPos = builtins.unsafeGetAttrPos "impl" combinatorObj;
           file = lib.removePrefix (toString ./..) attrPos.file;
         in
         ''
@@ -36,9 +36,8 @@
 
       combinatorDocs =
         let
-          allCombinators = import ../lib/combinators.nix (throw "Docs must not depend on args") (
-            throw "Docs must not depend on args"
-          );
+          allCombinators =
+            (import ../lib/combinators.nix pkgs (throw "Docs must not depend on jail arg")).docs;
 
           formatSection =
             filter:
