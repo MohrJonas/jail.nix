@@ -15,9 +15,15 @@ in
     all URLs to the `$BROWSER` outside of the jail. This way the jailed
     program can launch your browser, even if it has a subset of the
     permissions your browser has.
+
+    Only URLs beginning with `http(s)://` will be forwarded.
   '';
   impl = compose [
-    (jail-to-host-channel "browserchannel" ''"$BROWSER" "$1"'')
     (set-env "BROWSER" "browserchannel")
+    (jail-to-host-channel "browserchannel" ''
+      if [[ "$1" =~ ^https://|^http:// ]]; then
+        "$BROWSER" "$1"
+      fi
+    '')
   ];
 }

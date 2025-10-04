@@ -121,14 +121,44 @@ spec = parallel $ inTestM $ do
               fakeBrowser = sh ''
                 echo "got url: $1" >> #{tmpDir </> "fake-browser"}
               '';
-              jailed = jail "test" (sh ''$BROWSER https://example.org'') (c: [
+              jailed = jail "test" (sh ''$BROWSER "$@"'') (c: [
                 c.open-urls-in-browser
               ]);
             in sh ''
-              BROWSER=${lib.getExe fakeBrowser} ${lib.getExe jailed}
+              export BROWSER=${lib.getExe fakeBrowser}
+              ${lib.getExe jailed} "https://example.org"
+              ${lib.getExe jailed} "http://example.org"
             ''
           |]
-      liftIO $ readFile (tmpDir </> "fake-browser") `shouldReturn` "got url: https://example.org\n"
+      liftIO $
+        readFile (tmpDir </> "fake-browser")
+          `shouldReturn` unindent
+            [i|
+              got url: https://example.org
+              got url: http://example.org
+            |]
+
+    it "only allows urs that start with http(s)://" $ do
+      tmpDir <- getTestDir
+      void $
+        runNixDrv
+          [i|
+            let
+              fakeBrowser = sh ''
+                echo "got url: $1" >> #{tmpDir </> "fake-browser"}
+              '';
+              jailed = jail "test" (sh ''$BROWSER "$@"'') (c: [
+                c.open-urls-in-browser
+              ]);
+            in sh ''
+              export BROWSER=${lib.getExe fakeBrowser}
+              ${lib.getExe jailed} "file:///some/path"
+              ${lib.getExe jailed} "--headless"
+              ${lib.getExe jailed} ""
+              ${lib.getExe jailed}
+            ''
+          |]
+      liftIO $ doesFileExist (tmpDir </> "fake-browser") `shouldReturn` False
 
   describe "readonly-from-path-var" $ do
     forM_ [":", " "] $ \separator ->
