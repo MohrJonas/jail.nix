@@ -46,22 +46,28 @@ with enough permissions to have most software behave correctly.
 If you override this, you may want to take a look at the [default included
 combinators](combinators.md#default-included-combinators).
 
-Example:
+For example, here is the default set of base permissions:
 ```nix
 jail = jail-nix.lib.extend {
   inherit pkgs;
-  basePermissions = builtinCombinators: with builtinCombinators; [
-    (unsafe-add-raw-args "--proc /proc")
-    (unsafe-add-raw-args "--dev /dev")
-    (unsafe-add-raw-args "--tmpfs /tmp")
-    (unsafe-add-raw-args "--tmpfs ~")
-    (unsafe-add-raw-args "--clearenv")
-    (unsafe-add-raw-args "--die-with-parent")
+  basePermissions = combinators: with combinators; [
+    base
+    bind-nix-store-runtime-closure
+    fake-passwd
+  ];
+};
+```
+
+However if you wanted to bind in your entire nix store rather than using the
+bind-nix-store-runtime-closure combinator you could do that like so:
+
+```nix
+jail = jail-nix.lib.extend {
+  inherit pkgs;
+  basePermissions = combinators: with combinators; [
+    base
     (readonly "/nix/store")
-    (readonly "/bin/sh")
-    (fwd-env "LANG")
-    (fwd-env "HOME")
-    (fwd-env "TERM")
+    fake-passwd
   ];
 };
 ```
