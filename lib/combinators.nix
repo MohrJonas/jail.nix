@@ -688,12 +688,13 @@ rec {
       _: var: separator:
       assert pkgs.lib.isValidPosixName var;
       include-once "readonly-paths-from-var-${var}" (add-runtime ''
-        while read -rd${lib.escapeShellArg separator} DIR; do
+        IFS=${lib.escapeShellArg separator} read -ra DIRS <<< "''${${var}-}"
+        for DIR in "''${DIRS[@]}"; do
           if [ -e "$DIR" ]; then
             P="$(realpath "$DIR")"
             RUNTIME_ARGS+=(--ro-bind "$P" "$P")
           fi
-        done <<< "''${${var}-}"
+        done
       '');
   };
 
