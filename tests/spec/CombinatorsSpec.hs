@@ -160,7 +160,7 @@ spec = parallel $ inTestM $ do
           |]
       liftIO $ doesFileExist (tmpDir </> "fake-browser") `shouldReturn` False
 
-  describe "readonly-from-path-var" $ do
+  describe "readonly-paths-from-var" $ do
     forM_ [":", " "] $ \separator ->
       describe ("with separator \"" <> separator <> "\"") $ do
         it "binds all paths in the specified environment variable as read only" $ do
@@ -169,6 +169,7 @@ spec = parallel $ inTestM $ do
           let mkTestPath path = liftIO $ createDirectoryIfMissing True (tmpDir </> path) >> writeFile (tmpDir </> path </> "file") ""
           mkTestPath "some/path"
           mkTestPath "some/other/path"
+          mkTestPath "some/final/real/path"
           mkTestPath "some/not/in/var"
           let testPaths =
                 intercalate
@@ -176,9 +177,10 @@ spec = parallel $ inTestM $ do
                   $ map
                     (tmpDir </>)
                     [ "some/path",
-                      "some/non/existant/path",
+                      "some/non/existent/path",
                       "some/other/path",
-                      "some/other/non/existant/path"
+                      "some/other/non/existent/path",
+                      "some/final/real/path"
                     ]
           withEnv "TEST_PATHS" testPaths $ do
             [i|
@@ -189,13 +191,17 @@ spec = parallel $ inTestM $ do
               `shouldOutput` unindent
                 [i|
                   #{tmpDir </> "some"}
+                  |-- final
+                  |   `-- real
+                  |       `-- path
+                  |           `-- file
                   |-- other
                   |   `-- path
                   |       `-- file
                   `-- path
                       `-- file
 
-                  4 directories, 2 files
+                  7 directories, 3 files
                 |]
 
         it "doesn't require the var to be set" $ do
