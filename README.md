@@ -5,7 +5,9 @@
 A helper to make it easy and ergonomic to wrap your derivations in
 [bubblewrap](https://github.com/containers/bubblewrap).
 
-Please send patches, questions and discussions to my [general mailing
+Please report bugs and feature requests to the [issue
+tracker](https://todo.sr.ht/~alexdavid/jail.nix). Please send patches,
+questions and discussions to my [general mailing
 list](https://lists.sr.ht/~alexdavid/general).
 
 ## Getting Started
