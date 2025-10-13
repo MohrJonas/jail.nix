@@ -29,6 +29,46 @@ spec = parallel $ inTestM $ do
       [i| jail "test" (sh ''echo -n "''${MY_ENV_VAR-unset}"'') [] |]
         `shouldOutput` "unset"
 
+  describe "forwarding package overrides to the jailed derivation" $ do
+    -- This is a nix expression of a package that prints out the value of an
+    -- overridable `run`:
+    let overrideablePackage =
+          [i| pkgs.callPackage (opts: sh opts.run) { run = "printf unchanged"; } |]
+
+    it "successfully wraps overridable packages" $ do
+      [i|
+        let some-pkg = #{overrideablePackage}; in
+        jail "some-pkg" some-pkg []
+      |]
+        `shouldOutput` "unchanged"
+
+    it "forwards overrides to the underlying package" $ do
+      [i|
+        let
+          some-pkg = #{overrideablePackage};
+          jailed-some-pkg = jail "some-pkg" some-pkg [];
+        in
+          jailed-some-pkg.override { run = "printf 'new message!'"; }
+      |]
+        `shouldOutput` "new message!"
+
+    it "correctly sets the passed combinators on the overridden package" $ do
+      [i|
+        let
+          some-pkg = #{overrideablePackage};
+          jailed-some-pkg = jail "some-pkg" some-pkg (c: [
+            (c.write-text "/foo" "foo contents")
+          ]);
+        in
+          jailed-some-pkg.override { run = "cat /foo"; }
+      |]
+        `shouldOutput` "foo contents"
+
+    it "does not set `override` if the jailed package did not have it" $ do
+      jailHasOverride <-
+        evalNixExpr [i| (jail "not-overridable" (sh "") []) ? override |]
+      liftIO $ jailHasOverride `shouldBe` False
+
   describe "advanced configuration" $ do
     it "allows overriding base permissions shared across all jails" $ do
       tmpDir <- getTestDir

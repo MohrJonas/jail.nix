@@ -111,8 +111,18 @@ let
           }
         )
 
-        # forward man pages
-        (jailed: if exe ? man then jailed // { inherit (exe) man; } else jailed)
+        # Add additional properties on the jailed derivation
+        (
+          jailed:
+          jailed
+          # forward man pages
+          // lib.optionalAttrs (exe ? man) { inherit (exe) man; }
+
+          # forward `override`
+          // lib.optionalAttrs (exe ? override) {
+            override = overrideFn: jail name (exe.override overrideFn) permissions;
+          }
+        )
       ]
     );
 
