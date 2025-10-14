@@ -7,8 +7,13 @@ A helper to make it easy and ergonomic to wrap your derivations in
 
 Please report bugs and feature requests to the [issue
 tracker](https://todo.sr.ht/~alexdavid/jail.nix). Please send patches,
-questions and discussions to my [general mailing
+questions and discussions to my [mailing
 list](https://lists.sr.ht/~alexdavid/general).
+
+If you prefer to chat, feel free to join the matrix channel
+[#jail.nix:woh.place](https://matrix.to/#/#jail.nix:woh.place) to ask
+questions, discuss ideas, or report issues. I am also usually around and happy
+to help debug jailing software if you are having issues.
 
 ## Getting Started
 
