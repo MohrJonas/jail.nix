@@ -275,6 +275,28 @@ spec = parallel $ inTestM $ do
       |]
         `shouldOutput` "EST\n"
 
+    it "does not fail if /etc/localtime does not exist" $ do
+      [i|
+        let
+          fakeEtc = pkgs.runCommand "fake-etc" {} ''
+            mkdir -p $out/etc
+            ln -s ${pkgs.tzdata}/share/zoneinfo $out/etc/zoneinfo
+          '';
+          withFakeTimeZoneOnNixos = program:
+            jail program.name program (c: [
+              (c.add-pkg-deps [ fakeEtc ])
+              (c.unsafe-add-raw-args "--symlink ${fakeEtc}/etc /etc/static")
+              (c.unsafe-add-raw-args "--symlink /etc/static/zoneinfo /etc/zoneinfo")
+            ]);
+        in
+          withFakeTimeZoneOnNixos (
+            jail "print-time-zone" (sh "date '+%Z'") (c: [
+              c.time-zone
+            ])
+          )
+      |]
+        `shouldOutput` "UTC\n"
+
   describe "try-readonly" $ do
     it "binds paths as readonly in the jail" $ do
       tmpDir <- getTestDir

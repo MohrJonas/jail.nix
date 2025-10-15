@@ -1,9 +1,8 @@
 { combinators, ... }:
 let
   inherit (combinators)
-    compose
+    add-runtime
     include-once
-    unsafe-add-raw-args
     ;
 in
 {
@@ -11,8 +10,12 @@ in
   doc = ''
     Exposes your timezone.
   '';
-  impl = include-once "time-zone" (compose [
-    (unsafe-add-raw-args "--ro-bind \"$(realpath /etc/localtime)\" \"$(readlink /etc/localtime)\"")
-    (unsafe-add-raw-args "--symlink \"$(readlink /etc/localtime)\" /etc/localtime")
-  ]);
+  impl = include-once "time-zone" (add-runtime ''
+    if [ -L /etc/localtime ]; then
+      RUNTIME_ARGS+=(
+        --ro-bind "$(realpath /etc/localtime)" "$(readlink /etc/localtime)"
+        --symlink "$(readlink /etc/localtime)" /etc/localtime
+      )
+    fi
+  '');
 }
