@@ -1,19 +1,15 @@
-# jail.nix
+# jail.nix [![builds.sr.ht status](https://builds.sr.ht/~alexdavid/jail.nix/commits/main.svg)](https://builds.sr.ht/~alexdavid/jail.nix/commits/main?)
 
-[![builds.sr.ht status](https://builds.sr.ht/~alexdavid/jail.nix/commits/main.svg)](https://builds.sr.ht/~alexdavid/jail.nix/commits/main?)
+<!-- Thanks to ~whynothugo for inspiration for this set of links: -->
+[Docs](https://alexdav.id/projects/jail-nix/)
+| [Source](https://git.sr.ht/~alexdavid/jail.nix)
+| [Issues](https://todo.sr.ht/~alexdavid/jail.nix)
+| [Patches](https://lists.sr.ht/~alexdavid/general)
+| [Matrix](https://matrix.to/#/#jail.nix:woh.place)
 
 A helper to make it easy and ergonomic to wrap your derivations in
 [bubblewrap](https://github.com/containers/bubblewrap).
 
-Please report bugs and feature requests to the [issue
-tracker](https://todo.sr.ht/~alexdavid/jail.nix). Please send patches,
-questions and discussions to my [mailing
-list](https://lists.sr.ht/~alexdavid/general).
-
-If you prefer to chat, feel free to join the matrix channel
-[#jail.nix:woh.place](https://matrix.to/#/#jail.nix:woh.place) to ask
-questions, discuss ideas, or report issues. I am also usually around and happy
-to help debug jailing software if you are having issues.
 
 ## Getting Started
 
@@ -66,3 +62,11 @@ combinators into the jail you can modify the jail to expose more permissions.
 
 [Click here](https://alexdav.id/projects/jail-nix/combinators/) for a full list
 of combinators and their documentation.
+
+## Help / Comments / Suggestions
+
+I am working on docs with examples of combinators for various common software
+projects, but this isn't finished yet. In the meantime, if you need help
+jailing software, run into issues, or have suggestions, feel free to join
+[#jail.nix:woh.place](https://matrix.to/#/#jail.nix:woh.place) on matrix, or
+[open an issue](https://todo.sr.ht/~alexdavid/jail.nix).
