@@ -22,6 +22,7 @@ let
         add-path = ./combinators/add-path.nix;
         add-pkg-deps = ./combinators/add-pkg-deps.nix;
         add-runtime = ./combinators/add-runtime.nix;
+        add-seccomp = ./combinators/add-seccomp.nix;
         base = ./combinators/base.nix;
         bind-nix-store-runtime-closure = ./combinators/bind-nix-store-runtime-closure.nix;
         bind-pkg = ./combinators/bind-pkg.nix;
