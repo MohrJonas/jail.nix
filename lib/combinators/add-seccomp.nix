@@ -26,23 +26,25 @@ in
 
     See BWRAP(1) for more information.
   '';
-  impl = path: compose [
-    (helpers.pushState "seccompPermissions" (escape path))
-    (include-once "seccomp" (
-      defer (
-        state:
-        add-runtime ''
-          declare -a SECCOMP_FILTERS=(${toString (state.seccompPermissions)})
-          for FILTER in "''${SECCOMP_FILTERS[@]}"; do
-            if [[ -x "$FILTER" ]]; then
-              exec {FILTER_FD}< <("$FILTER")
-            else
-              exec {FILTER_FD}<"$FILTER"
-            fi
-            RUNTIME_ARGS+=(--add-seccomp-fd "$FILTER_FD")
-          done
-        '' state
-      )
-    ))
-  ];
+  impl =
+    path:
+    compose [
+      (helpers.pushState "seccompPermissions" (escape path))
+      (include-once "seccomp" (
+        defer (
+          state:
+          add-runtime ''
+            declare -a SECCOMP_FILTERS=(${toString (state.seccompPermissions)})
+            for FILTER in "''${SECCOMP_FILTERS[@]}"; do
+              if [[ -x "$FILTER" ]]; then
+                exec {FILTER_FD}< <("$FILTER")
+              else
+                exec {FILTER_FD}<"$FILTER"
+              fi
+              RUNTIME_ARGS+=(--add-seccomp-fd "$FILTER_FD")
+            done
+          '' state
+        )
+      ))
+    ];
 }
