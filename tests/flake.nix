@@ -18,7 +18,17 @@
         program = lib.getExe (
           pkgs.writeShellApplication {
             inherit name runtimeInputs;
-            text = script;
+            text = ''
+              if ! [ -e jail-nix-tests.cabal ]; then
+                if [ -e tests/jail-nix-tests.cabal ]; then
+                  cd tests
+                else
+                  echo "${name} must be called in repo root or tests directory"
+                  exit 1
+                fi
+              fi
+              ${script}
+            '';
           }
         );
       };
@@ -36,7 +46,7 @@
               (lib.concatStringsSep " ")
               (lib.toShellVar "NIX_PATH")
             ]
-        } cabal test
+        } cabal run spec -- "$@"
       '';
 
       apps.x86_64-linux.checkFmt = mkApp "check-fmt" [ pkgs.nixfmt-tree ] "treefmt --ci";
