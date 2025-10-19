@@ -44,6 +44,7 @@ let
         deferredPermissions = [ ]; # See defer combinator
         additionalRuntimeClosures = [ ]; # See bind-nix-store-runtime-closure
         dbusPermissions = [ ]; # See dbus combinator
+        seccompPermissions = [ ]; # See add-seccomp combinator
       };
     in
     lib.pipe initialState (
