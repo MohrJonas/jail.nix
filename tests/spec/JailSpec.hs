@@ -20,7 +20,7 @@ spec = parallel $ inTestM $ do
       `shouldOutput` "Hello, world!\n"
 
   it "sets a sane default path" $ do
-    defaultPath <- evalNixExpr [i| "${pkgs.coreutils}/bin" |]
+    defaultPath <- evalNixExpr [i| "${pkgs.coreutils}/bin:/bin" |]
     [i| jail "test" (sh ''echo -n "$PATH"'') [] |]
       `shouldOutput` defaultPath
 
@@ -28,6 +28,10 @@ spec = parallel $ inTestM $ do
     withEnv "MY_ENV_VAR" "secret" $ do
       [i| jail "test" (sh ''echo -n "''${MY_ENV_VAR-unset}"'') [] |]
         `shouldOutput` "unset"
+
+  it "provides `sh` in the default path" $ do
+    [i| jail "test" (sh ''sh -c "echo hello"'') [] |]
+        `shouldOutput` "hello\n"
 
   describe "forwarding package overrides to the jailed derivation" $ do
     -- This is a nix expression of a package that prints out the value of an

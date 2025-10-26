@@ -1,6 +1,12 @@
-{ combinators, pkgs, ... }:
+{
+  combinators,
+  pkgs,
+  helpers,
+  ...
+}:
 let
   inherit (combinators)
+    add-path
     add-pkg-deps
     ro-bind
     compose
@@ -24,7 +30,7 @@ in
       * Ensures all processes in the jail are killed when the jail exits
         (Using `--die-with-parent` bwrap arg)
       * Adds coreutils to the package deps (`add-pkg-deps [ pkgs.coreutils ]`)
-      * Binds `/bin/sh` from `pkgs.bash`
+      * Binds `/bin/sh` from `pkgs.bash` and adds `/bin` to `$PATH`
         (`ro-bind "''${pkgs.bash}/bin/sh" "/bin/sh"`)
       * Clears the environment except `LANG`, `HOME` and `TERM`
 
@@ -40,8 +46,10 @@ in
     (unsafe-add-raw-args "--tmpfs /tmp")
     (unsafe-add-raw-args "--tmpfs ~")
     (unsafe-add-raw-args "--die-with-parent")
-    (add-pkg-deps [ pkgs.coreutils ])
     (ro-bind "${pkgs.bash}/bin/sh" "/bin/sh")
+    (add-path "/bin")
+    (helpers.pushState "additionalRuntimeClosures" pkgs.bash)
+    (add-pkg-deps [ pkgs.coreutils ])
     (unsafe-add-raw-args "--clearenv")
     (fwd-env "LANG")
     (fwd-env "HOME")
