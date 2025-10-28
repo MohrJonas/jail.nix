@@ -14,12 +14,12 @@ combinator:
 ```nix
 jail = jail-nix.lib.extend {
   inherit pkgs;
-  additionalCombinators = builtinCombinators: with builtinCombinators; [
+  additionalCombinators = builtinCombinators: with builtinCombinators; {
     my-permission = compose [
       (readonly "/foo")
       (readonly "/bar")
     ];
-  ];
+  };
 };
 
 # Now my-permission is exposed in all the places the builtin combinators are exposed:
