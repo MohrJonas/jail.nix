@@ -25,7 +25,7 @@
       entry = lib.getExe (
         pkgs.writeShellApplication {
           name = "${state.name}-jail-wrapper";
-          text = getWrapper state.entry;
+          text = getWrapper "${state.entry} \"$@\"";
         }
       );
     };
