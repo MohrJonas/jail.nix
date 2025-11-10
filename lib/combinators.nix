@@ -51,6 +51,7 @@ let
         readonly-runtime-args = ./combinators/readonly-runtime-args.nix;
         readwrite = ./combinators/readwrite.nix;
         readwrite-runtime-args = ./combinators/readwrite-runtime-args.nix;
+        reset = ./combinators/reset.nix;
         ro-bind = ./combinators/ro-bind.nix;
         runtime-deep-ro-bind = ./combinators/runtime-deep-ro-bind.nix;
         rw-bind = ./combinators/rw-bind.nix;

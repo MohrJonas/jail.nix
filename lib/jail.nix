@@ -45,6 +45,7 @@ let
         additionalRuntimeClosures = [ ]; # See bind-nix-store-runtime-closure
         dbusPermissions = [ ]; # See dbus combinator
         seccompPermissions = [ ]; # See add-seccomp combinator
+        inherit initialState; # See reset combinator
       };
     in
     lib.pipe initialState (

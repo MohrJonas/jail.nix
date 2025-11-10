@@ -213,6 +213,29 @@ spec = parallel $ inTestM $ do
                 ])
               |]
 
+  describe "reset" $ do
+    it "clears all set permissions - including ones set in base permissions" $ do
+      [i|
+        let
+          jail' = jail-nix.extend {
+            inherit pkgs;
+            basePermissions = c: [
+              c.base
+              (c.readonly "/nix/store")
+              (c.write-text "/test-from-base-permissions" "")
+            ];
+          };
+        in
+          jail' "test" (sh "echo /test-from-*") (c: [
+            (c.write-text "/test-from-pre-reset-jail-permissions" "")
+            c.reset
+            c.base
+            (c.readonly "/nix/store")
+            (c.write-text "/test-from-post-reset-jail-permissions" "")
+          ])
+      |]
+        `shouldOutput` "/test-from-post-reset-jail-permissions\n"
+
   describe "set-argv" $ do
     it "overrides argv passed to the jailed program" $ do
       [i|
