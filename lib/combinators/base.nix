@@ -27,8 +27,6 @@ in
       * Sets up a fake dev at `/dev` (Using `--dev /dev` bwrap args)
       * Sets up a tmpfs at `/tmp` (Using `--tmpfs /tmp` bwrap args)
       * Sets up a tmpfs at your home (Using `--tmpfs ~` bwrap args)
-      * Ensures all processes in the jail are killed when the jail exits
-        (Using `--die-with-parent` bwrap arg)
       * Adds coreutils to the package deps (`add-pkg-deps [ pkgs.coreutils ]`)
       * Binds `/bin/sh` from `pkgs.bash` and adds `/bin` to `$PATH`
         (`ro-bind "''${pkgs.bash}/bin/sh" "/bin/sh"`)
@@ -45,7 +43,6 @@ in
     (unsafe-add-raw-args "--dev /dev")
     (unsafe-add-raw-args "--tmpfs /tmp")
     (unsafe-add-raw-args "--tmpfs ~")
-    (unsafe-add-raw-args "--die-with-parent")
     (ro-bind "${pkgs.bash}/bin/sh" "/bin/sh")
     (add-path "/bin")
     (helpers.pushState "additionalRuntimeClosures" pkgs.bash)

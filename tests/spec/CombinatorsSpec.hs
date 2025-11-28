@@ -1,8 +1,13 @@
 module CombinatorsSpec (spec) where
 
+import Control.Concurrent (threadDelay)
+import Control.Monad
 import Data.List.Extra
+import Data.Maybe (fromJust)
 import Data.String.Interpolate.Util
-import System.Directory.Extra (createDirectoryIfMissing, doesFileExist)
+import System.Directory.Extra (createDirectoryIfMissing, doesFileExist, doesPathExist)
+import System.Posix (getProcessStatus, sigKILL, signalProcess)
+import System.Process qualified as Process
 import Test.Hspec
 import TestPrelude
 
@@ -110,6 +115,60 @@ spec = parallel $ inTestM $ do
               jail' "test" "unused" (c: [ c.network ])
           |]
       liftIO $ (read out :: Int) `shouldSatisfy` (< 100)
+
+  describe "no-die-with-parent" $ do
+    let waitForChildPid :: Process.Pid -> TestM Process.Pid
+        waitForChildPid pid = do
+          children <- liftIO $ readFile ("/proc" </> show pid </> "task" </> show pid </> "children")
+          if children /= ""
+            then pure $ read children
+            else do
+              liftIO $ threadDelay 20_000
+              waitForChildPid pid
+
+    let pidExists :: Process.Pid -> TestM Bool
+        pidExists = liftIO . doesPathExist . ("/proc" </>) . show
+
+    let killProcess :: Process.Pid -> Bool -> TestM ()
+        killProcess pid waitForProcessToExit = liftIO $ do
+          signalProcess sigKILL pid
+          when waitForProcessToExit $ void $ getProcessStatus True False pid
+
+    it "kills all child processes when not specifying no-die-with-parent" $ do
+      (_, _, _, ph) <-
+        spawnNixDrv
+          [i|
+            let script = sh "nohup sleep inf";
+            in jail "test" script null
+          |]
+      outerBwrapPid <- liftIO $ fromJust <$> Process.getPid ph
+      innerBwrapPid <- waitForChildPid outerBwrapPid
+      bashPid <- waitForChildPid innerBwrapPid
+      sleepPid <- waitForChildPid bashPid
+      killProcess outerBwrapPid True
+      pidExists outerBwrapPid `shouldEventuallyReturn` False
+      pidExists innerBwrapPid `shouldEventuallyReturn` False
+      pidExists bashPid `shouldEventuallyReturn` False
+      pidExists sleepPid `shouldEventuallyReturn` False
+
+    it "does not kill child processes when specifying no-die-with-parent" $ do
+      (_, _, _, ph) <-
+        spawnNixDrv
+          [i|
+            let script = sh "nohup sleep inf";
+            in jail "test" script (c: [ c.no-die-with-parent ])
+          |]
+      outerBwrapPid <- liftIO $ fromJust <$> Process.getPid ph
+      innerBwrapPid <- waitForChildPid outerBwrapPid
+      bashPid <- waitForChildPid innerBwrapPid
+      sleepPid <- waitForChildPid bashPid
+      killProcess outerBwrapPid True
+      pidExists outerBwrapPid `shouldEventuallyReturn` False
+      liftIO $ threadDelay 500_000
+      pidExists innerBwrapPid `shouldReturnTestM` True
+      pidExists bashPid `shouldReturnTestM` True
+      pidExists sleepPid `shouldReturnTestM` True
+      killProcess sleepPid False
 
   describe "open-urls-in-browser" $ do
     it "exposes a $BROWSER in the jail that calls $BROWSER outside of the jail" $ do

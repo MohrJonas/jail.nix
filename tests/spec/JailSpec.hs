@@ -31,7 +31,7 @@ spec = parallel $ inTestM $ do
 
   it "provides `sh` in the default path" $ do
     [i| jail "test" (sh ''sh -c "echo hello"'') [] |]
-        `shouldOutput` "hello\n"
+      `shouldOutput` "hello\n"
 
   describe "forwarding package overrides to the jailed derivation" $ do
     -- This is a nix expression of a package that prints out the value of an
@@ -111,7 +111,7 @@ spec = parallel $ inTestM $ do
         in
           jail' "test" "some-entrypoint" []
       |]
-        `shouldOutput` "--unshare-user --unshare-ipc --unshare-pid --unshare-net --unshare-uts --unshare-cgroup --new-session -- some-entrypoint"
+        `shouldOutput` "--unshare-user --unshare-ipc --unshare-pid --unshare-net --unshare-uts --unshare-cgroup --new-session --die-with-parent -- some-entrypoint"
 
   describe "sandboxed nix store" $ do
     let checkRuntimeDepIsExposed :: Bool -> String -> TestM ()

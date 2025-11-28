@@ -10,14 +10,19 @@ module TestPrelude
     inTestM,
     liftIO,
     runNixDrv,
-    shouldOutput,
+    spawnNixDrv,
     toNixString,
     void,
     withEnv,
     lifted,
+    -- expectations
+    shouldEventuallyReturn,
+    shouldOutput,
+    shouldReturnTestM,
   )
 where
 
+import Control.Concurrent (threadDelay)
 import Control.Monad
 import Control.Monad.Extra (mapMaybeM)
 import Control.Monad.IO.Class (liftIO)
@@ -29,9 +34,11 @@ import Data.Map qualified as Map
 import Data.Maybe (fromJust)
 import Data.String.Conversions
 import Data.String.Interpolate (i)
+import GHC.IO.Handle (Handle)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
+import System.Process (CreateProcess, ProcessHandle, createProcess)
 import System.Process qualified as Process
 import Test.Hspec
 import Test.Hspec.Core.Spec qualified
@@ -54,6 +61,9 @@ lifted :: ((a -> IO b) -> IO c) -> (a -> TestM b) -> TestM c
 lifted io action = do
   ctx <- ask
   liftIO $ io $ flip runReaderT ctx . testMReaderT . action
+
+lifted' :: (IO x -> IO y) -> TestM x -> TestM y
+lifted' fn action = lifted (fn . ($ ())) (const action)
 
 instance Example (TestM ()) where
   type Arg (TestM ()) = Context
@@ -94,15 +104,26 @@ toNixString s =
 withEnv :: String -> String -> TestM () -> TestM ()
 withEnv name value = local $ \ctx -> ctx {env = Map.insert name value (env ctx)}
 
-runNixDrv :: String -> TestM String
-runNixDrv nixDrvExpr = do
+mkNixDrvProccess :: String -> TestM CreateProcess
+mkNixDrvProccess nixDrvExpr = do
   (exe :: String, drvPath :: FilePath) <-
     evalNixExpr
       [i| let d = #{nixDrvExpr}; in [(lib.getExe d) d.drvPath] |]
   void $ buildNixDrvPath drvPath
   env <- asks env
-  let p = (Process.proc exe []) {Process.env = Just $ Map.toList env}
-  liftIO $ Process.readCreateProcess p ""
+  pure $
+    (Process.proc exe [])
+      { Process.env = Just $ Map.toList env,
+        Process.std_in = Process.CreatePipe,
+        Process.std_out = Process.CreatePipe,
+        Process.std_err = Process.CreatePipe
+      }
+
+runNixDrv :: String -> TestM String
+runNixDrv = liftIO . flip Process.readCreateProcess "" <=< mkNixDrvProccess
+
+spawnNixDrv :: String -> TestM (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
+spawnNixDrv = liftIO . createProcess <=< mkNixDrvProccess
 
 buildNixDrvPath :: FilePath -> TestM FilePath
 buildNixDrvPath drvPath = do
@@ -142,7 +163,27 @@ evalNixExpr nixExpr = do
         ]
         ""
 
-shouldOutput :: String -> String -> TestM ()
+shouldOutput :: (HasCallStack) => String -> String -> TestM ()
 shouldOutput nixDrvExpr expectedOutput = do
   out <- runNixDrv nixDrvExpr
   liftIO $ out `shouldBe` expectedOutput
+
+shouldReturnTestM :: (HasCallStack, Show a, Eq a) => TestM a -> a -> TestM ()
+shouldReturnTestM action expected = lifted' (`shouldReturn` expected) action
+
+shouldEventuallyReturn :: (HasCallStack, Eq a, Show a) => TestM a -> a -> TestM ()
+shouldEventuallyReturn action expected = go 0
+  where
+    delay = 20_000
+    maxRetries = 5_000_000 `div` delay
+    go :: Int -> TestM ()
+    go retryCount = do
+      result <- action
+      if result == expected
+        then pure ()
+        else do
+          if retryCount > maxRetries
+            then liftIO $ result `shouldBe` expected
+            else do
+              liftIO $ threadDelay delay
+              go $ retryCount + 1

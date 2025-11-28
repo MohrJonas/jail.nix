@@ -36,6 +36,7 @@ let
         argv = "\"$@\"";
         runtime = "";
         newSession = true;
+        dieWithParent = true;
         hostname = "jail";
         env = { };
         namespaces = { };
@@ -75,6 +76,7 @@ let
         )
         (s: if builtins.length s.path > 0 then set-env "PATH" (lib.concatStringsSep ":" s.path) s else s)
         (s: if s.newSession then unsafe-add-raw-args "--new-session" s else s)
+        (s: if s.dieWithParent then unsafe-add-raw-args "--die-with-parent" s else s)
         (
           s:
           lib.foldr (

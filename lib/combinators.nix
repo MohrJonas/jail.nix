@@ -39,6 +39,7 @@ let
         jail-to-host-channel = ./combinators/jail-to-host-channel.nix;
         mount-cwd = ./combinators/mount-cwd.nix;
         network = ./combinators/network.nix;
+        no-die-with-parent = ./combinators/no-die-with-parent.nix;
         no-new-session = ./combinators/no-new-session.nix;
         noescape = ./combinators/noescape.nix;
         notifications = ./combinators/notifications.nix;

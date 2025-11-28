@@ -20,6 +20,7 @@ tests:
       - string-conversions
       - temporary
       - text
+      - unix
 
 default-extensions:
   - DerivingStrategies
@@ -28,6 +29,7 @@ default-extensions:
   - ImportQualifiedPost
   - LambdaCase
   - NamedFieldPuns
+  - NumericUnderscores
   - OverloadedStrings
   - QuasiQuotes
   - ScopedTypeVariables
