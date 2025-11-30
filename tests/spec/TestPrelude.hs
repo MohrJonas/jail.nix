@@ -10,6 +10,7 @@ module TestPrelude
     inTestM,
     liftIO,
     runNixDrv,
+    runNixDrvWithExitCode,
     spawnNixDrv,
     toNixString,
     void,
@@ -34,6 +35,7 @@ import Data.Map qualified as Map
 import Data.Maybe (fromJust)
 import Data.String.Conversions
 import Data.String.Interpolate (i)
+import GHC.IO.Exception (ExitCode)
 import GHC.IO.Handle (Handle)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
@@ -121,6 +123,9 @@ mkNixDrvProccess nixDrvExpr = do
 
 runNixDrv :: String -> TestM String
 runNixDrv = liftIO . flip Process.readCreateProcess "" <=< mkNixDrvProccess
+
+runNixDrvWithExitCode :: String -> TestM (ExitCode, String, String)
+runNixDrvWithExitCode = liftIO . flip Process.readCreateProcessWithExitCode "" <=< mkNixDrvProccess
 
 spawnNixDrv :: String -> TestM (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 spawnNixDrv = liftIO . createProcess <=< mkNixDrvProccess

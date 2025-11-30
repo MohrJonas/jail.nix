@@ -10,6 +10,7 @@ import System.Posix (getProcessStatus, sigKILL, signalProcess)
 import System.Process qualified as Process
 import Test.Hspec
 import TestPrelude
+import GHC.IO.Exception (ExitCode(..))
 
 spec :: Spec
 spec = parallel $ inTestM $ do
@@ -67,6 +68,26 @@ spec = parallel $ inTestM $ do
           ])
         |]
           `shouldOutput` "secret\n"
+
+    it "correctly escapes variables" $ do
+      withEnv "MY_ENV_VAR" "$(echo foo)" $ do
+        [i|
+          jail "test" (sh ''echo "''${MY_ENV_VAR-unset}"'') (c: [
+            (c.fwd-env "MY_ENV_VAR")
+          ])
+        |]
+          `shouldOutput` "$(echo foo)\n"
+
+    it "exits non-zero if the variable isn't set at runtime" $ do
+      (exitCode, _stdout, stderr) <-
+        runNixDrvWithExitCode
+          [i|
+            jail "test" (sh ''echo ok'') (c: [
+              (c.fwd-env "MY_ENV_VAR")
+            ])
+          |]
+      liftIO $ exitCode `shouldBe` ExitFailure 1
+      liftIO $ stderr `shouldContain` "MY_ENV_VAR: unbound variable"
 
   describe "jail-to-host-channel" $ do
     it "calls a script on the outside of the jail with an argument and returns its stdout" $ do
@@ -378,6 +399,33 @@ spec = parallel $ inTestM $ do
           )
       |]
         `shouldOutput` "UTC\n"
+
+  describe "try-fwd-env" $ do
+    it "forwards the environment variable if set" $ do
+      withEnv "MY_ENV_VAR" "secret" $ do
+        [i|
+          jail "test" (sh ''echo "''${MY_ENV_VAR-unset}"'') (c: [
+            (c.try-fwd-env "MY_ENV_VAR")
+          ])
+        |]
+          `shouldOutput` "secret\n"
+
+    it "correctly escapes variables" $ do
+      withEnv "MY_ENV_VAR" "$(echo foo)" $ do
+        [i|
+          jail "test" (sh ''echo "''${MY_ENV_VAR-unset}"'') (c: [
+            (c.try-fwd-env "MY_ENV_VAR")
+          ])
+        |]
+          `shouldOutput` "$(echo foo)\n"
+
+    it "does not set the environment variable if it is not set" $ do
+      [i|
+        jail "test" (sh ''echo "''${MY_ENV_VAR-unset}"'') (c: [
+          (c.try-fwd-env "MY_ENV_VAR")
+        ])
+      |]
+        `shouldOutput` "unset\n"
 
   describe "try-readonly" $ do
     it "binds paths as readonly in the jail" $ do
