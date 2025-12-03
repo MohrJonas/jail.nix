@@ -11,6 +11,7 @@ module TestPrelude
     liftIO,
     runNixDrv,
     runNixDrvWithExitCode,
+    runNixDrvWithinVm,
     spawnNixDrv,
     toNixString,
     void,
@@ -129,6 +130,55 @@ runNixDrvWithExitCode = liftIO . flip Process.readCreateProcessWithExitCode "" <
 
 spawnNixDrv :: String -> TestM (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 spawnNixDrv = liftIO . createProcess <=< mkNixDrvProccess
+
+runNixDrvWithinVm :: String -> String -> TestM String
+runNixDrvWithinVm vmConfig nixDrvExpr = do
+  testDir <- getTestDir
+  testOutputFilePath <- (</> "test-output") <$> getTestDir
+  liftIO $ writeFile testOutputFilePath "---\n"
+  void $
+    runNixDrvWithExitCode
+      [i|
+        let
+          system = import <nixpkgs/nixos/lib/eval-config.nix> {
+            modules = [
+              ({ pkgs, lib, ... }: {
+                system.stateVersion = "25.05";
+                virtualisation.vmVariant.virtualisation = {
+                  graphics = false;
+                  sharedDirectories.testOutput = { source = #{toNixString testDir}; target = #{toNixString testDir}; };
+
+                };
+                systemd.services.run-jail-nix-vm-test = {
+                  wantedBy = [ "multi-user.target" ];
+                  after = [ "network-online.target" ];
+                  wants = [ "network-online.target" ];
+                  environment = {
+                    HOME = "/root";
+                  };
+                  script = let
+                    jail-nix = import <jail-nix> {};
+                    jail = jail-nix.extend { inherit pkgs; };
+                    testToRun = #{nixDrvExpr};
+                  in ''
+                    (
+                      ${lib.getExe testToRun} || echo 'Test failed'
+                    ) >${#{toNixString testOutputFilePath}} 2>&1
+                    shutdown now
+                  '';
+                  serviceConfig.type = "oneshot";
+                };
+              })
+              #{vmConfig}
+            ];
+          };
+        in sh ''
+          TMP_DIR=$(${pkgs.coreutils}/bin/mktemp -d)
+          NIX_DISK_IMAGE="$TMP_DIR/img" ${system.config.system.build.vm}/bin/run-nixos-vm
+          ${pkgs.coreutils}/bin/rm -rf "$TMP_DIR"
+        ''
+      |]
+  liftIO $ readFile testOutputFilePath
 
 buildNixDrvPath :: FilePath -> TestM FilePath
 buildNixDrvPath drvPath = do

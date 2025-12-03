@@ -7,6 +7,7 @@ let
     runtime-deep-ro-bind
     share-ns
     time-zone
+    try-readonly
     unsafe-add-raw-args
     write-text
     ;
@@ -30,6 +31,7 @@ in
       (runtime-deep-ro-bind "/etc/nsswitch.conf")
       (runtime-deep-ro-bind "/etc/resolv.conf")
       (runtime-deep-ro-bind "/etc/ssl")
+      (try-readonly "/run/systemd/resolve")
       (write-text "/etc/hostname" "${state.hostname}\n")
       (unsafe-add-raw-args "--hostname ${escape state.hostname}")
     ] state

@@ -5,12 +5,12 @@ import Control.Monad
 import Data.List.Extra
 import Data.Maybe (fromJust)
 import Data.String.Interpolate.Util
+import GHC.IO.Exception (ExitCode (..))
 import System.Directory.Extra (createDirectoryIfMissing, doesFileExist, doesPathExist)
 import System.Posix (getProcessStatus, sigKILL, signalProcess)
 import System.Process qualified as Process
 import Test.Hspec
 import TestPrelude
-import GHC.IO.Exception (ExitCode(..))
 
 spec :: Spec
 spec = parallel $ inTestM $ do
@@ -115,6 +115,15 @@ spec = parallel $ inTestM $ do
           |]
       liftIO $ out `shouldContain` "<h1>Example Domain</h1>"
 
+    it "allows overriding the hostname with set-hostname" $ do
+      [i|
+        jail "test" (sh ''${pkgs.nettools}/bin/hostname'') (c: [
+          (c.set-hostname "my-hostname")
+          c.network
+        ])
+      |]
+        `shouldOutput` "my-hostname\n"
+
     it "does not add too many bwrap args" $ do
       out <-
         runNixDrv
@@ -136,6 +145,18 @@ spec = parallel $ inTestM $ do
               jail' "test" "unused" (c: [ c.network ])
           |]
       liftIO $ (read out :: Int) `shouldSatisfy` (< 100)
+
+    it "works on systems using systemd-resolved" $ do
+      out <-
+        runNixDrvWithinVm
+          [i| { services.resolved.enable = true; } |]
+          [i|
+            jail "test" (sh ''curl https://example.org'') (c: [
+              (c.add-pkg-deps [ pkgs.curl ])
+              c.network
+            ])
+          |]
+      liftIO $ out `shouldContain` "<h1>Example Domain</h1>"
 
   describe "no-die-with-parent" $ do
     let waitForChildPid :: Process.Pid -> TestM Process.Pid
