@@ -86,13 +86,14 @@ in
                 (map (id: "--${type}=${lib.escapeShellArg id}"))
               ];
 
-            args =
-              [ "--filter" ]
-              ++ getFlags "own"
-              ++ getFlags "talk"
-              ++ getFlags "see"
-              ++ getFlags "call"
-              ++ getFlags "broadcast";
+            args = [
+              "--filter"
+            ]
+            ++ getFlags "own"
+            ++ getFlags "talk"
+            ++ getFlags "see"
+            ++ getFlags "call"
+            ++ getFlags "broadcast";
           in
           compose [
             (add-runtime ''
