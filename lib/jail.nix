@@ -48,6 +48,7 @@ let
         seccompPermissions = [ ]; # See add-seccomp combinator
         inherit initialState; # See reset combinator
       };
+      extractIcon = import ./extract_icon.nix;
     in
     lib.pipe initialState (
       # Permissions shared by all invocations of jail
@@ -125,6 +126,19 @@ let
           # forward `override`
           // lib.optionalAttrs (exe ? override) {
             override = overrideFn: jail name (exe.override overrideFn) permissions;
+          }
+        )
+        (jailed:
+          pkgs.buildEnv {
+            inherit name;
+            paths = [ jailed (
+              pkgs.makeDesktopItem {
+                inherit name;
+                inherit name;
+                icon = extractIcon lib pkgs.gimp;
+                exec = lib.getExe jailed;
+              }
+            ) ];
           }
         )
       ]
