@@ -134,7 +134,6 @@ let
             paths = [ jailed (
               pkgs.makeDesktopItem {
                 inherit name;
-                inherit name;
                 icon = extractIcon lib pkgs.gimp;
                 exec = lib.getExe jailed;
               }
