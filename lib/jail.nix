@@ -132,8 +132,9 @@ let
           pkgs.buildEnv {
             inherit name;
             paths = [ jailed (
-              pkgs.makeDesktopItem {
+              pkgs.makeDesktopItem rec {
                 inherit name;
+                desktopName = name;
                 icon = extractIcon lib pkgs.gimp;
                 exec = lib.getExe jailed;
               }
