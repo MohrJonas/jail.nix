@@ -93,7 +93,7 @@ lib: let
       (lib.mapAttrsToList
         (sectionName: sectionEntries:
           builtins.concatStringsSep "\n"
-          ([(stringifyLine sectionName)] ++ builtins.map stringifyLine sectionEntries))
+          ([(stringifyLine sectionName)] ++ (builtins.map (entry: stringifyLine) sectionEntries)))
         content));
 in {
   parseDesktopFile = content: parseDesktopFile content;
