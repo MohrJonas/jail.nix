@@ -89,13 +89,12 @@ lib: let
   # Convert back the content obtailed from parseDesktopFile into the contents of a .desktop file
   writeDesktopFile = content:
     builtins.concatStringsSep "\n"
-    lib.flatten (lib.mapAttrsToList (
-      (sectionName: sectionEntries:
-        builtins.concatStringsSep "\n"
-        [stringifyLine sectionName]
-        ++ builtins.map (entry: stringifyLine entry) sectionEntries)
-      content
-    ));
+    (lib.flatten
+      (lib.mapAttrsToList
+        (sectionName: sectionEntries:
+          builtins.concatStringsSep "\n"
+          ([(stringifyLine sectionName)] ++ builtins.map stringifyLine sectionEntries))
+        content));
 in {
   parseDesktopFile = content: parseDesktopFile content;
   writeDesktopFile = content: writeDesktopFile content;
