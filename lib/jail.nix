@@ -21,7 +21,7 @@
     then []
     else throw "Unknown combinator type ${t}. Must be a function, list, or null";
 
-  desktopHelpers = import ./desktop-helpers lib;
+  desktopHelpers = import ./desktop-helpers.nix lib;
 
   # Extract the path of the .desktop file from the given package.
   # This assumes that there exists one file in <package>/share/applications and the parent folder actually exists
