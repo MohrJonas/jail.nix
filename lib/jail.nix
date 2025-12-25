@@ -42,11 +42,12 @@
     executable = lib.getExe exe;
   in
     desktopHelpers.writeDesktopFile (
-      lib.pipe desktopFileContent
-      [
-        (s: s // {"Desktop Entry" = {"Icon" = icon;};})
-        (s: s // {"Desktop Entry" = {"Exec" = executable;};})
-      ]
+      #lib.pipe desktopFileContent
+      #[
+      #  (s: s // {"Desktop Entry" = {"Icon" = icon;};})
+      #  (s: s // {"Desktop Entry" = {"Exec" = executable;};})
+      #]
+      desktopFileContent
     );
 
   jail = name: exe: permissions: let
