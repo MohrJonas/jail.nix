@@ -168,7 +168,7 @@
             [
               jailed
               (pkgs.writeTextFile {
-                    inherit name;
+                    name = "${name}-desktop";
                     text = patchDesktopFile exe;
                   })
             ]
