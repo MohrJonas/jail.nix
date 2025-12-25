@@ -3,16 +3,13 @@ pkgs: rec {
 
   dataDirSubPath = subPath: "${dataDir}/${escape subPath}";
 
-  noescape = value: { _noescape = value; };
+  noescape = value: {_noescape = value;};
 
-  escape =
-    rawOrStr:
-    if builtins.typeOf rawOrStr == "set" && rawOrStr ? _noescape then
-      rawOrStr._noescape
-    else
-      pkgs.lib.strings.escapeShellArg rawOrStr;
+  escape = rawOrStr:
+    if builtins.typeOf rawOrStr == "set" && rawOrStr ? _noescape
+    then rawOrStr._noescape
+    else pkgs.lib.strings.escapeShellArg rawOrStr;
 
-  pushState =
-    key: toPush: state:
-    state // { ${key} = state.${key} ++ [ toPush ]; };
+  pushState = key: toPush: state:
+    state // {${key} = state.${key} ++ [toPush];};
 }
