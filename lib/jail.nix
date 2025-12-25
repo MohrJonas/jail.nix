@@ -165,15 +165,22 @@
           jailed:
             if hasDesktopFile exe
             then
-              pkgs.buildEnv {
-                inherit name;
-                paths = [
-                  jailed
-                  (pkgs.writeTextFile {
+            [
+              jailed
+              (pkgs.writeTextFile {
                     inherit name;
                     text = patchDesktopFile exe;
                   })
-                ];
+            ]
+              #pkgs.buildEnv {
+              #  inherit name;
+              #  paths = [
+              #    jailed
+              #    (pkgs.writeTextFile {
+              #      inherit name;
+              #      text = patchDesktopFile exe;
+              #    })
+              #  ];
               }
             else jailed
         )
