@@ -181,7 +181,7 @@
               #      text = patchDesktopFile exe;
               #    })
               #  ];
-              }
+              #}
             else jailed
         )
       ]
