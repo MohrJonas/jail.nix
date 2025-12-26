@@ -1,4 +1,6 @@
 lib: let
+  debug = content:
+    builtins.trace content content;
   # Returns whether the line is a section heading by checking if the line starts with "["
   isLineSectionHeading = line:
     builtins.substring 0 1 line == "[";
@@ -30,7 +32,7 @@ lib: let
     then parseContentLine line
     else throw "Unhandeled line type ${line}";
   # Convert a set containing key and value as obtained from parseLine and parseContentLine back into a string
-  stringifyContent = content: "${content.key}=+${content.value}";
+  stringifyContent = content: "${content.key}=${content.value}";
   # Convert the given section heading string back into a heading with leading and trailing square brackets
   stringifySectionHeading = content: "[${content}]";
   # Stringify an element as obtailed from parseLine back into a string as found in a .desktop file.
@@ -63,7 +65,7 @@ lib: let
     elements =
       builtins.filter
       (element: element != null)
-      (builtins.map (line: parseLine) lines);
+      (builtins.map (line: parseLine line) lines);
   in
     (builtins.foldl'
       (state: element:
@@ -72,8 +74,7 @@ lib: let
           acc =
             state.acc
             // {
-              ${state.key} =
-                (state.acc.${state.key} or []) ++ [element];
+              ${state.key} = (state.acc.${state.key} or {}) // { ${element.key} = element.value; };
             };
           key = state.key;
         }
@@ -86,16 +87,24 @@ lib: let
         key = null;
       }
       elements).acc;
-  # Convert back the content obtailed from parseDesktopFile into the contents of a .desktop file
+  # Convert back the content obtained from parseDesktopFile into the contents of a .desktop file
   writeDesktopFile = content:
     builtins.concatStringsSep "\n"
-    (lib.flatten
-      (lib.mapAttrsToList
-        (sectionName: sectionEntries:
-          builtins.concatStringsSep "\n"
-          ([(stringifyLine sectionName)] ++ (builtins.map (entry: stringifyLine) sectionEntries)))
-        content));
+    (
+      lib.flatten
+      (
+        lib.mapAttrsToList
+        (
+          sectionName: sectionEntries:
+            builtins.concatStringsSep "\n"
+            (
+              [(stringifyLine sectionName)]
+              ++ (lib.mapAttrsToList (k: v: stringifyLine { key = k; value = v; }) sectionEntries)
+            )
+        )
+        content
+      )
+    );
 in {
-  parseDesktopFile = content: parseDesktopFile content;
-  writeDesktopFile = content: writeDesktopFile content;
+  inherit parseDesktopFile writeDesktopFile;
 }

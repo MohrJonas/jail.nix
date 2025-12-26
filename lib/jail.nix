@@ -32,7 +32,7 @@
   # Check whether the package has a .desktop file that needs to be patched
   hasDesktopFile = package: builtins.pathExists "${package}/share/applications";
 
-  extractIcon = import ./extract_icon.nix;
+  extractIcon = import ./extract-icon.nix;
 
   patchDesktopFile = exe: let
     desktopFilePath = getDesktopFilePath exe;
@@ -42,11 +42,11 @@
     executable = lib.getExe exe;
   in
     desktopHelpers.writeDesktopFile (
-      #lib.pipe desktopFileContent
-      #[
-      #  (s: s // {"Desktop Entry" = {"Icon" = icon;};})
-      #  (s: s // {"Desktop Entry" = {"Exec" = executable;};})
-      #]
+      lib.pipe desktopFileContent
+      [
+        (s: s // { "Desktop Entry" = s."Desktop Entry" // { Exec = executable; }; })
+        (s: s // { "Desktop Entry" = s."Desktop Entry" // { Icon = icon; }; })
+      ]
       desktopFileContent
     );
 
