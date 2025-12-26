@@ -34,12 +34,12 @@
 
   extractIcon = import ./extract-icon.nix;
 
-  patchDesktopFile = exe: let
+  patchDesktopFile = exe: jailed: let
     desktopFilePath = getDesktopFilePath exe;
     desktopFileText = builtins.readFile desktopFilePath;
     desktopFileContent = desktopHelpers.parseDesktopFile desktopFileText;
     icon = extractIcon lib exe;
-    executable = lib.getExe exe;
+    executable = lib.getExe jailed;
   in
     desktopHelpers.writeDesktopFile (
       lib.pipe desktopFileContent
@@ -170,7 +170,7 @@
                   jailed
                   (pkgs.writeTextFile {
                     name = "";
-                    text = patchDesktopFile exe;
+                    text = patchDesktopFile exe jailed;
                     destination = "/share/applications/${name}";
                   })
                 ];
