@@ -44,8 +44,9 @@
     desktopHelpers.writeDesktopFile (
       lib.pipe desktopFileContent
       [
-        (s: s // { "Desktop Entry" = s."Desktop Entry" // { Exec = executable; }; })
         (s: s // { "Desktop Entry" = s."Desktop Entry" // { Icon = icon; }; })
+        (s: s // { "Desktop Entry" = s."Desktop Entry" // { Exec = executable; }; })
+        (s: s // { "Desktop Entry" = s."Desktop Entry" // (if builtins.hasAttr "TryExec" s."DesktopEntry" then { TryExec = executable; } else {}); })
       ]
     );
 
