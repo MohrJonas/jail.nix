@@ -171,7 +171,7 @@
                   (pkgs.writeTextFile {
                     name = "";
                     text = patchDesktopFile exe jailed;
-                    destination = "/share/applications/${name}";
+                    destination = "/share/applications/${name}.desktop";
                   })
                 ];
               }
