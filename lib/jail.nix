@@ -169,10 +169,10 @@
                 inherit name;
                 paths = [
                   jailed
-                  (pkgs.writeTextFile {
+                  (pkgs.writeTextFile rec {
                     name = "${name}-desktop";
                     text = patchDesktopFile exe;
-                    destination = "/share/applications";
+                    destination = "/share/applications/${name}";
                   })
                 ];
               }
