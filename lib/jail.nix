@@ -172,7 +172,7 @@
                   (pkgs.writeTextFile {
                     name = "${name}-desktop";
                     text = patchDesktopFile exe;
-                    target = "/share/applications";
+                    destination = "/share/applications";
                   })
                 ];
               }
