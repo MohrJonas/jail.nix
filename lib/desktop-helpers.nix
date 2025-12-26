@@ -79,7 +79,7 @@ lib: let
           acc =
             state.acc
             // {
-              ${state.key} = (state.acc.${state.key} or {}) // { ${element.key} = element.value; };
+              ${state.key} = (state.acc.${state.key} or {}) // {${element.key} = element.value;};
             };
           key = state.key;
         }
@@ -104,7 +104,12 @@ lib: let
             builtins.concatStringsSep "\n"
             (
               [(stringifyLine sectionName)]
-              ++ (lib.mapAttrsToList (k: v: stringifyLine { key = k; value = v; }) sectionEntries)
+              ++ (lib.mapAttrsToList (k: v:
+                stringifyLine {
+                  key = k;
+                  value = v;
+                })
+              sectionEntries)
             )
         )
         content
