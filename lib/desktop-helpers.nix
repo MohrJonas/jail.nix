@@ -7,6 +7,9 @@ lib: let
   # Returns whether a line is empty
   isLineEmpty = line:
     builtins.stringLength line == 0;
+  # Returns whether a line is a comment line, i.e. starting with a #
+  isLineComment = line:
+    builtins.substring 0 1 line == "#";
   # Returns whether a line is a content line, i.e. a line of format key=value
   isLineContent = line:
     builtins.match ".*=.*" line != null;
@@ -27,6 +30,8 @@ lib: let
     if isLineSectionHeading line
     then trimSectionHeading line
     else if isLineEmpty line
+    then null
+    else if isLineComment line
     then null
     else if isLineContent line
     then parseContentLine line
