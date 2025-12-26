@@ -165,13 +165,6 @@
           jailed:
             if hasDesktopFile exe
             then
-            #[
-            #  jailed
-            #  (pkgs.writeTextFile {
-            #        name = "${name}-desktop";
-            #        text = patchDesktopFile exe;
-            #      })
-            #]
               pkgs.buildEnv {
                 inherit name;
                 paths = [
@@ -179,6 +172,7 @@
                   (pkgs.writeTextFile {
                     name = "${name}-desktop";
                     text = patchDesktopFile exe;
+                    target = "/share/applications";
                   })
                 ];
               }
