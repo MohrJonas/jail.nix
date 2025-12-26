@@ -47,7 +47,6 @@
         (s: s // { "Desktop Entry" = s."Desktop Entry" // { Exec = executable; }; })
         (s: s // { "Desktop Entry" = s."Desktop Entry" // { Icon = icon; }; })
       ]
-      desktopFileContent
     );
 
   jail = name: exe: permissions: let
