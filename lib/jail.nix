@@ -170,7 +170,6 @@
                 paths = [
                   jailed
                   (pkgs.writeTextFile {
-                    name = "${name}-desktop";
                     text = patchDesktopFile exe;
                     destination = "/share/applications/${name}";
                   })
