@@ -1,3 +1,5 @@
+# Fork of https://sr.ht/~alexdavid/jail.nix/ attempting to add auto-generation of .desktop-files
+
 # jail.nix [![builds.sr.ht status](https://builds.sr.ht/~alexdavid/jail.nix/commits/main.svg)](https://builds.sr.ht/~alexdavid/jail.nix/commits/main?)
 
 <!-- Thanks to ~whynothugo for inspiration for this set of links: -->
